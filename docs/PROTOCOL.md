@@ -1,104 +1,183 @@
-# Protocol Contract — AR Client
+# Protocol Specification
 
-The messaging contract this AR application must honour. **Mirrored from the control repository (`<url-of-control-repo>`), which is the source of truth.** If the two ever disagree, the control repo wins — update this copy.
+Message contracts between the orchestration server and every other component. This document is authoritative — implementations must match it exactly.
 
-Only the parts relevant to an AR client are reproduced here. The full protocol (smart plugs, sensor ingestion, buttons, display) lives in the control repo.
+Two planes:
+
+- **Event plane** — OSC over UDP. One-to-many fan-out, loss-tolerant, continuously repeated.
+- **Actuation plane** — HTTP over TCP. Point-to-point, must-succeed, confirmed.
 
 ---
 
-## 1. What this app receives
+## 1. Event plane — server to subscribers
 
-The orchestration server broadcasts an OSC bundle over UDP at a fixed rate (default **5 Hz**, i.e. every 200 ms) to every registered client.
+Emitted as an OSC bundle at a fixed rate (default 5 Hz, configurable) to every subscriber: all registered AR clients plus the static localhost subscribers (projection player, Ableton).
 
-| Address | Type | Range | Use in this app |
+| Address | Type | Range | Meaning |
 |---|---|---|---|
-| `/coral/state` | int32 | 0–3 | Discrete selector — which material set; whether polyp footage is alive |
-| `/coral/intensity` | float32 | 0.0–1.0 | Continuous driver — material vividness, colour blend, fade factors |
-| `/coral/temp` | float32 | °C | Live water temperature. Informational; not normally rendered by this app |
+| `/coral/state` | int32 | 0–3 | Discrete phase — used to *switch* (which clip, which material set) |
+| `/coral/intensity` | float32 | 0.0–1.0 | Continuous severity — used to *interpolate* (dim, cross-fade, colour) |
+| `/coral/temp` | float32 | °C | Live temperature, for display and reference |
 
-**Listen port:** UDP **9001** (configurable; must match the server's `broadcast.client_port`).
+### Subscriber contract
 
-### Applying the values
+Subscribers **MUST**:
+- Treat `intensity` as the primary continuous driver and `state` as the discrete selector.
+- Apply values idempotently — the same values arrive repeatedly by design.
+- Boot assuming state 0 / intensity 0.0 and converge silently on the first message received.
+- Tolerate missing messages; hold the last known value.
 
-- `intensity` is the primary driver for anything continuous. Lerp materials against it so changes read as smooth fades rather than steps.
-- `state` selects discrete behaviour only.
-- Values arrive repeatedly and unchanged by design — application must be idempotent.
-- On a missed message, hold the last known values. Never treat absence as an error.
+Subscribers **MUST NOT**:
+- Derive state from temperature themselves. The server is the single source of truth.
+- Send anything back to the server except `/client/hello` (AR clients only).
+- Depend on startup order.
 
----
+### Why fixed-rate repetition
 
-## 2. What this app sends
-
-Exactly one message, and nothing else:
-
-| Address | Type | Frequency | Meaning |
-|---|---|---|---|
-| `/client/hello` | string (device id) | every **5 s** | "I'm here, send broadcasts to me" |
-
-**Send to:** the server's IP on UDP **9000** (configurable).
-
-The server records the sender's IP from the UDP packet — the payload only needs a stable, unique identifier for the device (e.g. `phone-a`, or a device name). Registry entries idle for more than **15 s** are pruned; sending `hello` again re-registers automatically.
-
-This app has **no other outbound messages** and no control authority over the installation.
+The broadcast is simultaneously the data plane and the heartbeat. A lost UDP datagram is corrected 200 ms later; a client that restarts converges within one interval. There is no separate keep-alive, no acknowledgement, and no retry logic anywhere in the system.
 
 ---
 
-## 3. State semantics
+## 2. Registration — AR clients to server
 
-| State | Name | Entered when | AR presentation |
-|---|---|---|---|
-| 0 | Natural | Water at ~26 °C, no bleach latch | Healthy orange coral material; magnifier reveals lively polyp footage |
-| 1 | Fluorescent | Temperature rising above 26.2 °C | Material lerps toward vivid fluorescence with `intensity`; polyps still alive |
-| 2 | Bleached | ≥27.8 °C sustained 10 s — **latches** | Bleached white material; polyp footage fades to ghostly stillness or absence |
-| 3 | Recovery | Cooling began, after a ~30 s lag | Gradually heals back toward healthy; life returns |
+Mobile AR devices are transient and interchangeable, so they are not given reserved addresses. They announce themselves instead.
 
-**State 2 is latched on the server.** Once bleached, the installation stays bleached regardless of temperature until the server initiates recovery — and recovery only begins after a deliberate delay. This app must never implement local recovery, shortcut the lag, or attempt to "fix" the appearance.
+| Address | Type | Meaning |
+|---|---|---|
+| `/client/hello` | string | Client identifier, sent every 5 s |
 
-The transition from 0→1 is fully reversible; only bleaching is a one-way door. That asymmetry is thematic, not a bug.
+Server behaviour:
+- On receipt: insert or refresh `{id, ip, port, last_seen}` in the client registry. **Both the IP and the port are taken from the UDP packet source**, not the payload.
+- Broadcast is unicast to that `(ip, port)` for every registered client.
+- Entries with `last_seen` older than 15 s are pruned.
 
----
+Client requirement (**MUST**):
+- A client **MUST send `/client/hello` from the same socket it listens for broadcasts on.** The server replies to the packet's source `(ip, port)`, so a client that transmits hello from a different or ephemeral port than it listens on will register successfully but **never receive a broadcast**. In practice: use one bidirectional UDP/OSC socket, bound to the client's listen port (default 9001), for both sending hello and receiving the fan-out. (In Unity/extOSC, set the transmitter's local port to the receiver's port.)
 
-## 4. The magnifier
+Why `(ip, port)` and not a fixed port: taking the port from the packet lets several clients share one host — e.g. multiple `tools/fake_client.py` instances on one laptop during localhost testing, which could not all bind the same fixed port — and is NAT-friendly. The cost is the MUST above.
 
-Device-to-target distance is used **only** for the magnifier effect — never to derive state.
-
-- Moving the device closer progressively reveals embedded polyp video through a masked blend over the coral-surface material.
-- In **state 2**, the footage is desaturated to stillness or absent entirely. A visitor who leans in expecting life and finds none is the installation's key emotional beat; preserve it.
-- In **state 3**, life returns gradually as the coral heals.
+This is application-layer service discovery: a phone that joins, sleeps, crashes, or is swapped mid-exhibition is handled with no configuration.
 
 ---
 
-## 5. Lifecycle requirements
+## 3. Actuation plane — server to smart plugs (Tasmota)
 
-| Situation | Required behaviour |
+The Athom plugs run Tasmota and expose a local HTTP command endpoint. No cloud, no hub, no authentication on a trusted LAN.
+
+```
+GET http://<plug-ip>/cm?cmnd=Power%20On
+GET http://<plug-ip>/cm?cmnd=Power%20Off
+GET http://<plug-ip>/cm?cmnd=Power          # query current state
+```
+
+Response is JSON, e.g. `{"POWER":"ON"}`.
+
+Plugs in use (IPs from config):
+
+| Role | Purpose |
 |---|---|
-| App launches before the server exists | Boot to state 0 / intensity 0.0; wait silently; converge on first broadcast |
-| Server restarts mid-session | Hold last values; reconverge within one broadcast interval |
-| Device sleeps and wakes | Resume sending `hello`; resync on next broadcast |
-| Network drops briefly | Hold last values; no error state shown to the visitor |
-| Three devices running at once | Each operates independently; no coordination between them |
+| `heater` | Powers the thermostatic aquarium heater. On = warming toward its dial setpoint. |
+| `fan` | Powers the aquarium cooling fan (via USB brick). On = active cooling. |
+| `lamp` | Powers the room lamp. On/off only — no dimming. |
 
-Startup order must never matter. There is no handshake, no acknowledgement, and no retry logic — the continuously repeated broadcast is itself the recovery mechanism.
+### Control contract
+
+The server treats the temperature subsystem as **set-target → gate-power → observe-sensor**:
+
+- Target warm (28.0) → heater plug **on**, fan plug **off**
+- Target cool (26.0) → heater plug **off**, fan plug **on**
+
+The server never assumes the heater's internal state — the heater has its own thermostat and self-regulates. The server only gates power and observes the sensor.
+
+Failures must be non-fatal: log the error, continue deriving state from the real sensor reading, retry on the next actuation change.
 
 ---
 
-## 6. Configuration
+## 4. Sensor ingestion — ESP32-C3 to server
 
-Keep these as editable settings, not hard-coded values:
+The sensor runs ESPHome. Two supported modes, chosen by config; the ingestion function isolates the difference so nothing downstream changes.
 
-| Setting | Default |
+**HTTP poll (default).** The server polls the ESPHome web server at 2–5 Hz:
+
+```
+GET http://<sensor-ip>/sensor/water_temperature
+→ {"id":"sensor-water_temperature","value":26.4,"state":"26.4 °C"}
+```
+
+**MQTT push (alternative).** If a broker is present, ESPHome publishes to a topic the server subscribes to. Functionally equivalent.
+
+On timeout or malformed response: log, hold the last known temperature, continue. Optionally fall back to the simulated ramp for graceful degradation during an exhibition.
+
+---
+
+## 5. Input — buttons to server
+
+The arcade encoder enumerates as a **USB HID gamepad/joystick**, not a keyboard. Read it with `pygame.joystick` (or `hid`).
+
+| Physical | Event | Server action |
+|---|---|---|
+| Warm button (red) | gamepad button N pressed | set target = 28.0 |
+| Cool button (blue) | gamepad button M pressed | set target = 26.0 |
+
+Semantics:
+- One press sets the target. Idempotent — repeat presses are harmless.
+- **Cool wins** if both are pressed simultaneously or in the same tick.
+- Any press resets the idle timer.
+- Button indices are configurable; discover them once and record in config.
+
+### Harness input (no-hardware mode)
+
+While the physical buttons are unbuilt (Phases 1–5), `tools/fake_rig.py` injects presses over OSC to the server's listen port (UDP 9000), so the whole arc is drivable from a keyboard:
+
+| Address | Type | Server action |
+|---|---|---|
+| `/sim/warm` | (no args) | set target = warm — identical to the warm button |
+| `/sim/cool` | (no args) | set target = cool — identical to the cool button |
+
+These are **development-harness messages only**. They funnel into the exact same set-target path the HID buttons use (above), so state logic is byte-identical whether input arrives from the keyboard or the encoder. They are harmless to leave enabled in production on the isolated LAN.
+
+---
+
+## 6. Display — server to display device
+
+The server hosts a minimal read-only web page (default port 8080) showing live temperature and a subtle indicator of the current target. A spare phone or tablet displays it in a browser.
+
+```
+GET http://<server-ip>:8080/        → the display page
+GET http://<server-ip>:8080/api     → {"temp":26.4,"target":28.0,"state":1,"intensity":0.2}
+```
+
+Read-only. No control authority.
+
+---
+
+## 7. Port allocation (defaults; all configurable)
+
+| Endpoint | Proto/Port |
 |---|---|
-| Server IP | (set per installation) |
-| Server port (for `hello`) | 9000 |
-| This device's listen port | 9001 |
-| Device id | unique per device |
-| Hello interval | 5 s |
+| Server OSC listener (hello) | UDP 9000 |
+| AR devices OSC listener | UDP 9001 (per device) |
+| Ableton Connection Kit | UDP 9010 (localhost) |
+| Projection player | UDP 9020 (localhost) |
+| Display web page | HTTP 8080 |
+| Tasmota plugs | HTTP 80 |
+| ESPHome sensor | HTTP 80 |
 
 ---
 
-## 7. Reference implementation notes
+## 8. Reserved addressing
 
-- **extOSC** (free Unity package) handles both receive and send.
-- Register an `OSCReceiver` on the listen port with bindings for the three `/coral/*` addresses.
-- Drive a single `OSCTransmitter` on a 5-second repeating invoke for `hello`.
-- Keep the received values in one small state object that materials and the magnifier read from — don't scatter OSC handling through the scene.
+Fixed devices get DHCP reservations by MAC on the router; AR phones use the dynamic pool and self-register.
+
+| Host | Example IP |
+|---|---|
+| Router / gateway | 192.168.8.1 |
+| MacBook (server) | 192.168.8.10 (wired) |
+| Heater plug | 192.168.8.21 |
+| Fan plug | 192.168.8.22 |
+| Lamp plug | 192.168.8.23 |
+| Temperature sensor | 192.168.8.30 |
+| Display device | 192.168.8.40 |
+| AR phones | DHCP pool |
+
+Adjust to the Opal's actual subnet; these are config values, not commitments.
