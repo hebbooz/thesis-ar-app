@@ -187,7 +187,7 @@ visitor/operator/developer/researcher stories with checkable acceptance criteria
 
 This Unity AR application is **one component of a multi-part installation**, not a standalone app. It is a **passive subscriber** in a centrally orchestrated system.
 
-**Control repository:** `<url-of-control-repo>`
+**Control repository:** `https://github.com/hebbooz/thesis-installation-control`
 **Protocol contract:** see `docs/PROTOCOL.md` in this repo (mirrored from the control repository — that repo is the source of truth; update this copy if the contract changes).
 
 ### The system in one sentence
