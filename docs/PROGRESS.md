@@ -1,0 +1,258 @@
+# PROGRESS.md — Status & roadmap
+
+_Last updated: 2026-07-14_
+
+A living record of what's built, the key decisions made along the way, and what
+remains. For the original vision see `CLAUDE.md`; for the phase-by-phase plan see
+`BUILD_PLAN.md` (note: Phases 3+ were **re-shaped by a design pivot** — see below).
+
+---
+
+## Snapshot
+
+**The full loop now works on device (2026-07-14):** the iPad tracks the physical
+3D print via a Vuforia Model Target, and leaning in reveals the fluorescent coral,
+then bleaches it — proximity IS the zoom. The remaining work is **refinement**:
+tighter *spatial registration* of the glow onto the print (Phase 5) and *tuning the
+zoom/reveal beats* against the real object (Phase 7), plus the plinth mount, an
+endurance/thermal soak, and the thesis write-up.
+
+---
+
+## The design pivot (important context)
+
+The original plan placed a **discrete polyp mesh in every corallite** (Baker →
+Pool → per-cup instances). Partway through Phase 3 we recognised this is **not
+accurate for this coral**: _Goniastrea_ (Astraea favistella) is **cerioid** — a
+continuous shared-wall honeycomb — so the true fluorescent view is a **glowing
+honeycomb of tissue over the skeleton**, not anemone-like tentacle polyps.
+
+**Decision:** render the fluorescence as **living tissue on the coral surface**
+(a shader on the coral mesh), not as discrete polyps. Bonus insight: the physical
+3D print *is* the bleached white skeleton, so the virtual layer only needs to
+render the **fluorescence**, which drains away to reveal the print as it bleaches.
+
+- **Shelved (not deleted):** `PolypPool.cs`, the polyp prefab, `FluorescentPolyp.shader`.
+  Kept in case a hybrid (glowing honeycomb + raised oral discs) is ever wanted.
+- **Still useful:** the Baker's `PolypScatterMap` (columella positions can drive
+  where oral discs glow brightest, later); `ProximityRevealController`'s reveal/
+  bleach logic (to be retargeted at the coral material).
+
+---
+
+## Current concrete state — what ALREADY EXISTS (don't re-create this)
+
+_Read this before proposing any setup steps. Most setup is done; re-instructing it
+is the #1 way to confuse the operator. Named assets below already exist and are wired._
+
+**Engine / project:** Unity **6000.5.3f1**, URP. iOS target configured (camera
+usage description, min iOS 16, iPad-only, bundle `com.thesis.coralpolyps`).
+`Mobile_RPAsset` is the active URP pipeline, **assigned across Graphics + all
+Quality levels**, **HDR ON**. (Don't remove that assignment — see gotchas.)
+
+**Working scene:** `Assets/Scenes/SampleScene.unity`. The coral GameObject is in it
+with the CoralTissue material applied. _(A Vuforia sample scene `0-Main.unity` and
+`Assets/SamplesResources/` — Astronaut etc. — also exist; that's Vuforia-sample
+clutter, safe to ignore/delete, not part of this project.)_
+
+**Coral mesh:** `Assets/CoralPolyps/Coral/astraea_favistella.obj` — 100k tris,
+~10 cm real scale, **Read/Write ON**, **Tangents = Calculate**.
+
+**Active material:** `Assets/CoralPolyps/Coral/CoralTissue.mat`, shader
+`CoralPolyps/FluorescentTissue`. Textures already assigned + import-configured:
+| Slot | Texture (`Coral/textures/`) | Import |
+|---|---|---|
+| `_AOMap` (occlusion) | `coral_occlusion.jpg` | sRGB **OFF** |
+| `_NormalMap` (septa) | `coral_normals.jpg` | Type **Default**, sRGB **OFF** (shader unpacks manually) |
+| `_MainTex` (skeleton) | `coral_diffuse.jpg` | sRGB ON |
+
+Current tuned look-dev values (live in the material — read them there, don't reset):
+WallColor green `(0.11,1,0.31)`, FloorColor violet `(0.59,0.37,1)`, StressColor warm
+`(1,0.55,0.2)`, AOContrast 1.79, ColorSplit 2.38, FloorGlow 0.80, WallGlow 0,
+Depth 0.65, ReliefStrength 0.45, EmissionStrength 2.24, SurgeBoost 1.35.
+Blend state is **opaque look-dev mode** (`_SrcBlend 1 / _DstBlend 0 / _ZWrite 1`) —
+the Phase-4 loupe/transparency is intentionally OFF on this material; the controller
+enables it on a runtime instance.
+
+**Post-processing:** a **Global Volume with Bloom** (Threshold ~1, Intensity ~0.6)
+exists; **Main Camera has Post Processing ON**. (This is why the glow reads.)
+
+**Bake:** `Assets/CoralPolyps/PolypScatterMap.asset` exists (secondary now — the
+tissue approach doesn't need it, but it holds columella positions if ever wanted).
+
+**Phase 4 code (written, NOT yet wired in-scene):** `FluorescentTissue.shader` has
+the loupe reveal + AR transparency (`_LoupeOn` keyword, `_LoupeCenter/_LoupeRadius/
+_LoupeSoftness`, material-driven blend). `ProximityRevealController` is retargeted to
+drive the coral material. Remaining: add the controller to the scene, assign the
+coral renderer + camera, and verify in Play mode.
+
+**Phase 5 started:** a Vuforia **Model Target database `coral-rendering`** already
+exists at `Assets/Resources/VuforiaModels/coral-rendering/`.
+
+**Shelved — exists but NOT on the active path (don't use, don't delete):**
+`Assets/CoralPolyps/Polyp/` (`polyp.obj` + `PolypFluorescent.mat`),
+`FluorescentPolyp.shader`, `PolypPool.cs`. These were the discrete-polyp approach.
+
+---
+
+## Completed
+
+### Phase 0 — Unity project scaffolding ✅
+- Unity **6000.5.3f1**, URP, AR Foundation + ARKit + Vuforia (11.4.4).
+- Scripts split into `Runtime/` + `Editor/` with asmdefs.
+- iOS player settings, code-signing, and an **empty scene deployed and running on
+  the iPad** (live camera) — the Phase 0 gate.
+- Overcame two serious issues: a ShaderGraph bug on 6.4 (fixed by moving to 6.5),
+  and a **72-billion shader-variant build crash** caused by no URP pipeline asset
+  being assigned (fixed by assigning `Mobile_RPAsset` + trimming features).
+- Added a **headless build harness** (`Assets/CoralPolyps/Editor/BuildScript.cs`).
+
+### Phase 1 — Coral mesh ✅
+- Smithsonian **_Goniastrea_ (Astraea favistella)** scan, CC0. Converted
+  **glTF → OBJ** via Blender (mesh-only, no decimation) — **100k tris**, real-world
+  **~10 cm** (verified from the glTF's metre-unit bounds).
+- **Read/Write Enabled** on for baking. Raw download preserved in `SourceAssets/`.
+- Scan textures (diffuse, occlusion, normal) imported to `Coral/textures/`.
+
+### Phase 2 — Corallite bake ✅
+- `CoralliteBaker` detects one outward-facing spot per corallite. Working settings:
+  **Concavity 0.06, Min Spacing 0.025**.
+- Upgraded the Baker to compute each cup's normal from a **smoothed outward
+  average** (the raw single-vertex normal on a noisy scan pointed every which way).
+- Output: `PolypScatterMap` asset (100k density validated as sufficient).
+
+### Phase 3 — Fluorescent tissue look ✅ (editor look-dev)
+- New shader **`Runtime/FluorescentTissue.shader`** on the coral:
+  - **Two-tone fluorescence** — green ridges / cyan floors, split by the occlusion map.
+  - **Depth** — occlusion-driven wall emphasis + shadowed recesses + directional relief.
+  - **Fine septal detail** — from the scan's normal map (tangent-space).
+  - **Stress arc** (0→1): healthy honeycomb → **neon colourful-bleach surge** →
+    fluorescence drains to bare skeleton. (Biologically grounded — chromoprotein
+    "colourful bleaching" before tissue loss.)
+- HDR + a **Bloom** post-process volume set up so the emission actually glows.
+
+---
+
+## To do
+
+### Phase 3 remainder (small)
+- [ ] Replace the two fluorescence colours (`_WallColor`, `_FloorColor`) from **real
+      _Goniastrea_ fluorescence imagery**; record source/wavelengths (⚠️ honesty rule).
+- [ ] Final scrub of the full `_Stress` arc with the neon surge + septal detail.
+
+### Phase 4 — The reveal mechanism (proximity IS zoom) ⭐ CODE DONE
+- [x] Added a **loupe reveal + AR transparency** to `FluorescentTissue`: fluorescence
+      appears only inside a soft **world-space** sphere (`_LoupeCenter`/`_LoupeRadius`/
+      `_LoupeSoftness`), and the tissue alpha-blends over the print — outside the loupe
+      AND fully bleached both go transparent so the real coral shows through. A
+      `_LOUPE_ON` toggle + **material-driven blend state** keep the Phase-3 look-dev
+      material working unchanged (opaque, fully revealed) while the AR path is enabled
+      on a runtime instance.
+- [x] **Retargeted `ProximityRevealController`** to drive the coral material's loupe
+      centre/radius + `_Stress` (via a runtime `.material` instance it auto-configures
+      into AR mode) instead of the shelved Pool.
+- [x] **Wired in the scene + verified in editor (2026-07-12):** controller on
+      `astraea_favistella`, `coralRenderer` = the `default` mesh, `cam` = ARCamera,
+      `configureMaterialForAR` on. Verified the full reveal→bleach arc in Play mode via
+      `ProximityTestRig.cs` (a throwaway slider that moves the coral toward the camera to
+      stand in for proximity): opacity fades in → grows → glow → colourful bleach →
+      drains to transparent. ✅
+- [x] Added a **Mesh Collider** on the coral (`default`) and assigned it as
+      `coralCollider`, so the loupe centres where the viewer looks. _(Still to do: a
+      depth-only occlusion mesh so real coral bumps hide glow behind them — Phase 5.)_
+- [x] **Verified on device (2026-07-14):** built to iPad; the Vuforia Model Target locks
+      the coral to the physical print, and leaning in reveals → bleaches the glow. Test
+      rig removed for the device build. The full Phase 4 + Phase 5 loop works end-to-end. ✅
+
+**Implementation notes for the next session:**
+- **Shader:** add `_LoupeCenter` (world pos), `_LoupeRadius`, `_LoupeSoftness`.
+  Pass world position to the fragment; compute
+  `reveal = 1 - smoothstep(_LoupeRadius - _LoupeSoftness, _LoupeRadius, distance(fragWS, _LoupeCenter))`.
+  Multiply the emission (and the output alpha) by `reveal`. Switch the SubShader to
+  **transparent/additive** blending and output `alpha = reveal * emissionPresence`
+  so *outside the loupe* and *fully bleached* both go see-through → the real printed
+  coral shows through. (`emissionPresence` already drains via the `_Stress` arc.)
+- **Controller:** `ProximityRevealController` already does the raycast → smoothed
+  distance → two arcs (reveal + bleach) logic. Only the *outputs* change: instead of
+  `pool.SetLoupe()` / `pool.stress`, set the coral renderer's
+  `_LoupeCenter`/`_LoupeRadius`/`_Stress` via a `MaterialPropertyBlock` (or
+  `Shader.SetGlobalVector/Float`). Keep the threshold ordering
+  `bleachFull < revealFull < bleachStart < revealStart`.
+- **Coordinates:** loupe centre is a world point (the raycast hit); do the distance
+  test in world space in the shader (simplest), or convert to the coral's local
+  space — either works as long as it's consistent.
+
+**Phase-4 code review (2026-07 — verify these when wiring up; not blocking):**
+1. **Tracking-loss gate may not fire.** `ProximityRevealController` closes the loupe
+   on `!_anchor.gameObject.activeInHierarchy`, but Vuforia's `DefaultObserverEventHandler`
+   often disables the *Renderer / child content* on target-lost, not the GameObject —
+   so this check can miss and the glow hangs in space. **Test on device;** if it
+   doesn't close, also check `coralRenderer.enabled`/`isVisible` or hook Vuforia's
+   `OnTargetLost`.
+2. **Transparency sorting with `ZWrite` off.** AR mode alpha-blends with no depth
+   write; on the honeycomb you can see into cups (near rim + far wall both front-face
+   and overlap), so cups may sort wrong. Subtle at healthy alpha ~0.9 — **watch on
+   device.** Fixes if needed: depth pre-pass, alpha-to-coverage, or switch AR to
+   **additive** blend (order-independent, but then the real print always shows through).
+3. **Registration precision dependency.** Healthy tissue is a *dark* base + glow that
+   *covers* the print (alpha ~0.9), so the virtual coral must register tightly onto the
+   physical print or dark tissue spills past its silhouette. Raises the bar on Model
+   Target quality (Phase 5).
+
+_The rest reviewed clean: world-space loupe stays correct as tracking moves the coral;
+the `.material` runtime-instance approach cleanly isolates AR mode from the saved
+look-dev material; the raycast → nearest-point → origin fallback chain is robust._
+
+### Phase 5 — Tracking ✅ WORKING ON DEVICE (needs refinement)
+- [x] Built a **Vuforia Model Target** (`coral-rendering` database) from the coral mesh.
+- [x] Parented `astraea_favistella` under the `ModelTarget`; aligned it via the
+      `AlignCoralWindow` editor tool (matches world render bounds to Vuforia's target
+      representation). Tracks and overlays the glow on the physical print on device.
+- [ ] **Refine spatial mapping / registration (flagged on device 2026-07-14):** the
+      overlay is close but not tight. Nudge the coral's local transform under
+      `ModelTarget` against the real overlay; improve guide views / detection if needed.
+      (Tight registration matters — dark tissue covers the print; code-review note #3.)
+- [ ] Add a **depth-only occlusion mesh** (reuse the target-representation mesh) so real
+      coral bumps hide glow behind them. Image-marker fallback at the base (optional).
+
+### Phase 6 — Physical build
+- [x] **3D-print the coral at life-size (10 cm)** — DONE (printed 2026-07).
+- [ ] Mount on the plinth.
+
+### Phase 7 — Tune on device ⭐ NOW ACTIVE
+**Reveal mechanic redesigned (2026-07-14) after device feedback** — `ProximityRevealController`
++ `ProximityTestRig` rewritten:
+- **No reveal fade** — the coral shows at full fluorescence whenever tracked (loupe retired;
+  shader `_LOUPE_ON` kept OFF). Far = healthy glowing coral by default.
+- **Gradual colour** — the bleach/`_Stress` arc is spread over a WIDE distance range
+  (`colorStartDistance`→`colorFullDistance`), with `maxStress` capping the end state
+  (1 = drains to the bare print; <1 keeps magnified fluorescence visible).
+- **Magnification** — the coral scales up about its own centre as the camera nears
+  (`magnifyStart/FullDistance`, `maxMagnification`) — the magnifying-glass zoom.
+- `ProximityTestRig` now feeds the controller a MANUAL distance (no moving coral/camera),
+  so the feel is tunable in-editor (Play + scrub, watch the Scene view) before building.
+- [ ] Tune the colour + magnify ranges/curves in-editor with the test rig, then validate +
+      fine-tune on device (each device change needs a fresh Unity→Xcode build — quit Chrome).
+      _(FILE_DOCS.md still describes the old loupe reveal — update it once this mechanic is
+      validated on device.)_
+
+### Phase 8 — Endurance & exhibition
+- [ ] All-day thermal / framerate soak; test the actual room's lighting.
+
+### Phase 9 — Research framing (thesis)
+- [ ] Document the stylised-not-scientific framing; cite the Smithsonian scan (CC0),
+      the fluorescence imagery used for colours, and which choices are grounded vs.
+      exaggerated for legibility.
+
+---
+
+## Key decisions & gotchas (so they aren't re-litigated)
+
+- **URP pipeline asset must stay assigned** (Graphics + all Quality levels) or the
+  iOS build hits a shader-variant explosion. Re-check after any Unity upgrade.
+- **Unity 6.5 (Tech Stream), not LTS** — chosen to dodge a 6.4 ShaderGraph bug.
+- **Coral is 100k tris** (Sketchfab's ceiling; no denser geometry available there).
+  Validated as sufficient for the bake. Fallback for more detail: 3d.si.edu original.
+- **Baker normal computation was upgraded** to averaged/outward — don't revert.
+- The **physical print is the bleached skeleton** — the virtual layer only renders
+  fluorescence, which drains to reveal it. This shapes the whole reveal/shader design.

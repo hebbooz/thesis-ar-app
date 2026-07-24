@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(set -e)",
+      "Bash(mkdir -p Assets/CoralPolyps/Runtime Assets/CoralPolyps/Editor)",
+      "Bash(git mv *)",
+      "Bash(mv CoralliteBaker.cs Assets/CoralPolyps/Editor/)",
+      "Bash(mv PolypPool.cs PolypScatterMap.cs FluorescentPolyp.shader ProximityRevealController.cs Assets/CoralPolyps/Runtime/)",
+      "Bash(ps -p 76694 -o pid,etime,%cpu,%mem,comm)",
+      "WebSearch",
+      "WebFetch(domain:discussions.unity.com)",
+      "Read(//Applications/Unity/Hub/Editor/**)",
+      "Bash(curl -s \"https://services.api.unity.com/unity/editor/release/v1/releases?version=6000.4&limit=25\")",
+      "Bash(python3 -m json.tool)",
+      "Read(//Applications/Unity Hub.app/Contents/MacOS/**)",
+      "Bash(\"/Applications/Unity Hub.app/Contents/MacOS/Unity Hub\" --help)",
+      "Bash(\"/Applications/Unity Hub.app/Contents/MacOS/Unity Hub\" -- --headless help)"
+    ]
+  }
+}

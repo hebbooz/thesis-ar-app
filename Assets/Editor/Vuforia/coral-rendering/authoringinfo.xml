@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<QCARInfo>
+<TargetSet version="27.0" toolVersion="11.4.4">
+<ModelTarget name="coral-rendering" targetId="5c28bb9868964dbab023f4751cd78571" version="14.0" toolVersion="11.4.4" bbox="-0.194461 0.0586842 0 -0.0615402 0.197315 0.110118" upVector="0 0 1" previewImage="5c28bb9868964dbab023f4751cd78571_preview.jpg"/>
+
+</TargetSet>
+
+<Assembly name="coral-renderings_assembly" assemblyId="14f9aa7be0b34bb5bcdbb3f736bf9c68">
+<Part name="coral-rendering" translation="0 0 0" rotation="AD: 0 0 1 0"/>
+<EntryPoint name="GuideView_0000" translation="-0.166888 0.00728886 0.366143" rotation="AD: 0.984613 0.661505 -0.355808 133.692" image="coral-rendering_GuideView_0000.png" trained="no">
+
+</EntryPoint>
+<EntryPoint name="GuideView_0001" translation="0.0627909 0.0358969 0.452127" rotation="AD: 0.318686 1.45528 -1.30197 163.6" image="coral-rendering_GuideView_0001.png" trained="no">
+
+</EntryPoint>
+<EntryPoint name="GuideView_0002" translation="0.17425 0.0527209 0.225742" rotation="AD: 0.684312 -1.16828 1.22388 137.111" image="coral-rendering_GuideView_0002.png" trained="no">
+
+</EntryPoint>
+<EntryPoint name="GuideView_0003" translation="-0.0165277 0.0264629 0.0835408" rotation="AD: 0.995662 -0.360047 0.420919 88.7747" image="coral-rendering_GuideView_0003.png" trained="no">
+
+</EntryPoint>
+<EntryPoint name="GuideView_0004" translation="-0.121391 -0.137971 0.31519" rotation="AD: 0.999607 1.05128 0.0387207 182.907" image="coral-rendering_GuideView_0004.png" trained="no">
+
+</EntryPoint>
+<EntryPoint name="GuideView_0005" translation="-0.160713 0.0614271 0.191433" rotation="AD: -0.919806 -0.673187 -4.11685 74.427" image="coral-rendering_GuideView_0005.png" trained="no">
+
+</EntryPoint>
+<EntryPoint name="GuideView_0006" translation="0.13281 0.0492842 0.144731" rotation="AD: 0.879331 -0.913696 0.957185 119.79" image="coral-rendering_GuideView_0006.png" trained="no">
+
+</EntryPoint>
+
+</Assembly>
+
+</QCARInfo>

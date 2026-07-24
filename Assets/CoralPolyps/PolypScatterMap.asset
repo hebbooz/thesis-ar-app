@@ -1,0 +1,2304 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: abc7c0c2ccb0c48e590c025cd72ab2ee, type: 3}
+  m_Name: PolypScatterMap
+  m_EditorClassIdentifier: CoralPolyps.Runtime::CoralPolyps.PolypScatterMap
+  sourceMeshName: default
+  sourceBounds:
+    m_Center: {x: -0.000032000244, y: -0.0000129994005, z: 0.000043001026}
+    m_Extent: {x: 0.048935, y: 0.029577, z: 0.050896}
+  corallites:
+  - localPosition: {x: 0.0355, y: -0.004749, z: 0.028339}
+    localNormal: {x: 0.9405447, y: 0.07991136, z: 0.33013612}
+    scale: 0.0014580847
+    confidence: 0.18091759
+    randomSeed: 0.7340687
+  - localPosition: {x: -0.014958, y: 0.009516, z: 0.035054}
+    localNormal: {x: -0.17818046, y: 0.820479, z: 0.5431997}
+    scale: 0.002054112
+    confidence: 0.16890985
+    randomSeed: 0.47285706
+  - localPosition: {x: -0.044699, y: 0.003357, z: 0.001265}
+    localNormal: {x: -0.91982317, y: 0.26255247, z: 0.2915332}
+    scale: 0.0018269572
+    confidence: 0.16805986
+    randomSeed: 0.46181756
+  - localPosition: {x: -0.043448, y: -0.007428, z: 0.006277}
+    localNormal: {x: -0.9421587, y: 0.22630244, z: 0.24723299}
+    scale: 0.0020372795
+    confidence: 0.16237113
+    randomSeed: 0.38061553
+  - localPosition: {x: 0.032459, y: 0.003973, z: -0.001307}
+    localNormal: {x: 0.8181641, y: 0.5727595, z: 0.050537255}
+    scale: 0.0015485286
+    confidence: 0.1620948
+    randomSeed: 0.64079326
+  - localPosition: {x: 0.035711, y: -0.001957, z: 0.023922}
+    localNormal: {x: 0.7514804, y: 0.45124313, z: 0.48130754}
+    scale: 0.0015662028
+    confidence: 0.1560007
+    randomSeed: 0.22745791
+  - localPosition: {x: 0.013688, y: 0.015664, z: -0.015682}
+    localNormal: {x: 0.42845514, y: 0.7075598, z: -0.5619478}
+    scale: 0.0022355898
+    confidence: 0.1559086
+    randomSeed: 0.6015876
+  - localPosition: {x: -0.014806, y: 0.02303, z: -0.01168}
+    localNormal: {x: -0.23656985, y: 0.97152495, z: -0.01319282}
+    scale: 0.0015861818
+    confidence: 0.15579596
+    randomSeed: 0.8455442
+  - localPosition: {x: 0.006037, y: 0.02414, z: 0.002185}
+    localNormal: {x: 0.3882899, y: 0.9214423, z: 0.013233211}
+    scale: 0.0022223983
+    confidence: 0.15224563
+    randomSeed: 0.78130686
+  - localPosition: {x: 0.026691, y: 0.008598, z: 0.001057}
+    localNormal: {x: 0.49547717, y: 0.86775434, z: -0.03879167}
+    scale: 0.001526124
+    confidence: 0.15139037
+    randomSeed: 0.14430548
+  - localPosition: {x: 0.028267, y: 0.008675, z: 0.008487}
+    localNormal: {x: 0.4744163, y: 0.8799572, z: 0.024587175}
+    scale: 0.0018985117
+    confidence: 0.15020272
+    randomSeed: 0.25661102
+  - localPosition: {x: 0.026093, y: 0.008398, z: -0.009637}
+    localNormal: {x: 0.54221344, y: 0.8165745, z: -0.19801706}
+    scale: 0.002103606
+    confidence: 0.14725532
+    randomSeed: 0.68265945
+  - localPosition: {x: 0.029931, y: -0.002448, z: 0.033449}
+    localNormal: {x: 0.5781223, y: 0.680489, z: 0.45023248}
+    scale: 0.002332769
+    confidence: 0.14437161
+    randomSeed: 0.3689125
+  - localPosition: {x: 0.002906, y: 0.007197, z: 0.040621}
+    localNormal: {x: 0.12572393, y: 0.69150025, z: 0.71135145}
+    scale: 0.001560901
+    confidence: 0.14307351
+    randomSeed: 0.14651693
+  - localPosition: {x: -0.013566, y: 0.01469, z: 0.031871}
+    localNormal: {x: -0.13943504, y: 0.54373723, z: 0.8275915}
+    scale: 0.0015052976
+    confidence: 0.14296873
+    randomSeed: 0.3654596
+  - localPosition: {x: 0.016258, y: 0.009965, z: -0.022698}
+    localNormal: {x: 0.6061932, y: 0.7170465, z: -0.34405538}
+    scale: 0.001553054
+    confidence: 0.14293917
+    randomSeed: 0.5154632
+  - localPosition: {x: 0.015638, y: 0.01701, z: 0.006827}
+    localNormal: {x: 0.6031475, y: 0.7914758, z: 0.098889984}
+    scale: 0.0023541672
+    confidence: 0.14240529
+    randomSeed: 0.07725454
+  - localPosition: {x: 0.03293, y: 0.001944, z: 0.023781}
+    localNormal: {x: 0.68259335, y: 0.63735366, z: 0.35755646}
+    scale: 0.0017074831
+    confidence: 0.14143902
+    randomSeed: 0.78848135
+  - localPosition: {x: -0.035627, y: -0.010774, z: -0.026321}
+    localNormal: {x: -0.8497512, y: -0.17641848, z: -0.4967891}
+    scale: 0.001633622
+    confidence: 0.14127769
+    randomSeed: 0.7009639
+  - localPosition: {x: -0.008681, y: 0.017078, z: -0.028202}
+    localNormal: {x: 0.14368996, y: 0.9556303, z: -0.25714576}
+    scale: 0.0018149335
+    confidence: 0.14021054
+    randomSeed: 0.07155908
+  - localPosition: {x: 0.002107, y: 0.013846, z: -0.031365}
+    localNormal: {x: 0.28772852, y: 0.76331747, z: -0.5784106}
+    scale: 0.002273863
+    confidence: 0.14001682
+    randomSeed: 0.9565637
+  - localPosition: {x: 0.020106, y: -0.001282, z: -0.033017}
+    localNormal: {x: 0.6128274, y: 0.45476615, z: -0.6462433}
+    scale: 0.0019744223
+    confidence: 0.13991958
+    randomSeed: 0.1988534
+  - localPosition: {x: 0.038646, y: -0.004384, z: -0.009847}
+    localNormal: {x: 0.6782376, y: 0.7134856, z: -0.17587532}
+    scale: 0.0021326854
+    confidence: 0.13971934
+    randomSeed: 0.07904745
+  - localPosition: {x: 0.028988, y: 0.008207, z: 0.012475}
+    localNormal: {x: 0.6224296, y: 0.7698071, z: 0.14134508}
+    scale: 0.0023302427
+    confidence: 0.13915434
+    randomSeed: 0.6002255
+  - localPosition: {x: 0.016838, y: 0.005033, z: -0.030744}
+    localNormal: {x: 0.42276955, y: 0.7975547, z: -0.43031678}
+    scale: 0.0021661858
+    confidence: 0.13890515
+    randomSeed: 0.27340844
+  - localPosition: {x: 0.012144, y: 0.006063, z: 0.037316}
+    localNormal: {x: 0.6382427, y: 0.6479921, z: 0.4156351}
+    scale: 0.0016349037
+    confidence: 0.13879296
+    randomSeed: 0.94184864
+  - localPosition: {x: 0.037281, y: -0.00031, z: -0.001536}
+    localNormal: {x: 0.80516917, y: 0.58336604, z: -0.10670851}
+    scale: 0.001916285
+    confidence: 0.13851692
+    randomSeed: 0.81688976
+  - localPosition: {x: -0.010491, y: -0.009339, z: 0.042865}
+    localNormal: {x: -0.51016706, y: -0.017654486, z: 0.8598941}
+    scale: 0.0023228538
+    confidence: 0.1382194
+    randomSeed: 0.15875508
+  - localPosition: {x: 0.012261, y: 0.020606, z: 0.012383}
+    localNormal: {x: 0.3129505, y: 0.949766, z: 0.0025647527}
+    scale: 0.0019050546
+    confidence: 0.13792522
+    randomSeed: 0.4647352
+  - localPosition: {x: 0.022204, y: 0.011719, z: 0.019365}
+    localNormal: {x: 0.53988385, y: 0.8391886, z: -0.06548337}
+    scale: 0.002222933
+    confidence: 0.1368416
+    randomSeed: 0.44784683
+  - localPosition: {x: 0.039424, y: -0.002021, z: 0.016139}
+    localNormal: {x: 0.76116914, y: 0.53379625, z: 0.36835194}
+    scale: 0.0022350757
+    confidence: 0.13656352
+    randomSeed: 0.89492977
+  - localPosition: {x: 0.008483, y: 0.02232, z: -0.001632}
+    localNormal: {x: 0.37374932, y: 0.9062908, z: -0.19735348}
+    scale: 0.0018444798
+    confidence: 0.1361743
+    randomSeed: 0.8018137
+  - localPosition: {x: -0.042616, y: -0.012534, z: -0.017646}
+    localNormal: {x: -0.9847106, y: -0.057398543, z: -0.16447036}
+    scale: 0.002324092
+    confidence: 0.1361377
+    randomSeed: 0.83358586
+  - localPosition: {x: -0.002816, y: 0.022362, z: -0.016306}
+    localNormal: {x: 0.23427168, y: 0.9210141, z: -0.31120723}
+    scale: 0.0015721257
+    confidence: 0.13561504
+    randomSeed: 0.5546375
+  - localPosition: {x: 0.027395, y: -0.010062, z: 0.038108}
+    localNormal: {x: 0.8611204, y: -0.3106001, z: 0.40249133}
+    scale: 0.0019740209
+    confidence: 0.13551223
+    randomSeed: 0.58138496
+  - localPosition: {x: -0.021394, y: -0.013282, z: -0.038302}
+    localNormal: {x: -0.49456745, y: -0.14912955, z: -0.85624963}
+    scale: 0.0016976413
+    confidence: 0.13486779
+    randomSeed: 0.9085957
+  - localPosition: {x: 0.023665, y: 0.012513, z: -0.006047}
+    localNormal: {x: 0.48071888, y: 0.87646306, z: -0.026868325}
+    scale: 0.0018395131
+    confidence: 0.13468674
+    randomSeed: 0.9185666
+  - localPosition: {x: 0.007242, y: -0.003451, z: 0.044292}
+    localNormal: {x: 0.10487909, y: 0.35898694, z: 0.9274313}
+    scale: 0.0017857575
+    confidence: 0.13456362
+    randomSeed: 0.5573166
+  - localPosition: {x: -0.012408, y: -0.015379, z: 0.03989}
+    localNormal: {x: -0.70318955, y: -0.27073616, z: 0.65743935}
+    scale: 0.002310641
+    confidence: 0.13394968
+    randomSeed: 0.61532646
+  - localPosition: {x: -0.011746, y: -0.00173, z: -0.04294}
+    localNormal: {x: -0.34956017, y: 0.22939521, z: -0.90839726}
+    scale: 0.0016554983
+    confidence: 0.13347112
+    randomSeed: 0.9291352
+  - localPosition: {x: 0.023149, y: 0.011384, z: 0.006946}
+    localNormal: {x: 0.60586625, y: 0.755122, z: 0.25043336}
+    scale: 0.0019421275
+    confidence: 0.13344137
+    randomSeed: 0.09950043
+  - localPosition: {x: 0.019, y: 0.010955, z: -0.018429}
+    localNormal: {x: 0.5256392, y: 0.82523763, z: -0.20660692}
+    scale: 0.0022763137
+    confidence: 0.13344114
+    randomSeed: 0.42179352
+  - localPosition: {x: 0.012605, y: 0.001391, z: -0.035843}
+    localNormal: {x: 0.47899267, y: 0.57027787, z: -0.6673449}
+    scale: 0.0019430434
+    confidence: 0.13171187
+    randomSeed: 0.3341321
+  - localPosition: {x: -0.021897, y: 0.00756, z: -0.034823}
+    localNormal: {x: -0.3559559, y: 0.47349715, z: -0.8056649}
+    scale: 0.001863546
+    confidence: 0.13143611
+    randomSeed: 0.07426155
+  - localPosition: {x: 0.023687, y: 0.007292, z: -0.021221}
+    localNormal: {x: 0.5498613, y: 0.70666593, z: -0.44528183}
+    scale: 0.0017413753
+    confidence: 0.13142955
+    randomSeed: 0.13121201
+  - localPosition: {x: 0.007032, y: 0.010609, z: 0.035437}
+    localNormal: {x: 0.3867565, y: 0.6348894, z: 0.668831}
+    scale: 0.0016630722
+    confidence: 0.13131706
+    randomSeed: 0.59158295
+  - localPosition: {x: 0.003139, y: 0.016857, z: 0.029965}
+    localNormal: {x: 0.390874, y: 0.6494877, z: 0.65221417}
+    scale: 0.0016106272
+    confidence: 0.13114735
+    randomSeed: 0.24151781
+  - localPosition: {x: -0.006138, y: 0.02197, z: 0.021095}
+    localNormal: {x: 0.110076204, y: 0.8785951, z: 0.4647084}
+    scale: 0.0018066182
+    confidence: 0.13102087
+    randomSeed: 0.5803626
+  - localPosition: {x: 0.003346, y: 0.017036, z: -0.026076}
+    localNormal: {x: 0.39172143, y: 0.833221, z: -0.39025253}
+    scale: 0.0015658506
+    confidence: 0.1304218
+    randomSeed: 0.85621095
+  - localPosition: {x: -0.02336, y: 0.013621, z: 0.028295}
+    localNormal: {x: -0.32296932, y: 0.83742785, z: 0.44091436}
+    scale: 0.002335685
+    confidence: 0.13033362
+    randomSeed: 0.7286573
+  - localPosition: {x: 0.037834, y: 0.001262, z: 0.005748}
+    localNormal: {x: 0.6494344, y: 0.75219053, z: -0.11155475}
+    scale: 0.0021639983
+    confidence: 0.13012597
+    randomSeed: 0.85320556
+  - localPosition: {x: -0.032631, y: 0.009601, z: 0.026907}
+    localNormal: {x: -0.7331325, y: 0.34099594, z: 0.58842045}
+    scale: 0.001537507
+    confidence: 0.12998815
+    randomSeed: 0.22704163
+  - localPosition: {x: 0.021701, y: -0.002253, z: 0.039163}
+    localNormal: {x: 0.5376038, y: 0.58224255, z: 0.60989827}
+    scale: 0.0018266228
+    confidence: 0.12927751
+    randomSeed: 0.45729977
+  - localPosition: {x: -0.003865, y: -0.011501, z: -0.046002}
+    localNormal: {x: 0.14649093, y: -0.34356156, z: -0.92763454}
+    scale: 0.0022101237
+    confidence: 0.12915236
+    randomSeed: 0.09581222
+  - localPosition: {x: 0.007096, y: -0.008591, z: 0.04641}
+    localNormal: {x: 0.11637499, y: -0.12573005, z: 0.9852151}
+    scale: 0.0016976023
+    confidence: 0.12907667
+    randomSeed: 0.8735858
+  - localPosition: {x: 0.028093, y: 0.00452, z: -0.020125}
+    localNormal: {x: 0.7751592, y: 0.5323091, z: -0.34025764}
+    scale: 0.001672129
+    confidence: 0.12880516
+    randomSeed: 0.17688741
+  - localPosition: {x: 0.035843, y: -0.004241, z: -0.015921}
+    localNormal: {x: 0.9162963, y: 0.3799794, z: -0.12655707}
+    scale: 0.0018452272
+    confidence: 0.12872653
+    randomSeed: 0.0720507
+  - localPosition: {x: -0.016764, y: 0.018217, z: -0.023118}
+    localNormal: {x: -0.35699737, y: 0.9041627, z: -0.2346117}
+    scale: 0.0021906705
+    confidence: 0.12863347
+    randomSeed: 0.29931965
+  - localPosition: {x: 0.03622, y: 0.00094, z: 0.010609}
+    localNormal: {x: 0.76251984, y: 0.61361086, z: 0.20504923}
+    scale: 0.0021785693
+    confidence: 0.12852134
+    randomSeed: 0.55597407
+  - localPosition: {x: -0.030197, y: 0.021076, z: 0.006617}
+    localNormal: {x: -0.47908846, y: 0.8769014, z: -0.038965423}
+    scale: 0.0019913854
+    confidence: 0.12838666
+    randomSeed: 0.7082009
+  - localPosition: {x: 0.005377, y: 0.008049, z: -0.036348}
+    localNormal: {x: 0.60331815, y: 0.62633824, z: -0.49366754}
+    scale: 0.0019855346
+    confidence: 0.12835898
+    randomSeed: 0.0663364
+  - localPosition: {x: -0.026021, y: -0.006391, z: -0.036584}
+    localNormal: {x: -0.34328863, y: -0.12408918, z: -0.93099666}
+    scale: 0.0020557987
+    confidence: 0.12830317
+    randomSeed: 0.45446843
+  - localPosition: {x: 0.012446, y: 0.014837, z: -0.023017}
+    localNormal: {x: 0.36044, y: 0.90640205, z: -0.22026901}
+    scale: 0.0022665078
+    confidence: 0.12813662
+    randomSeed: 0.55363697
+  - localPosition: {x: 0.020652, y: 0.014103, z: 0.001783}
+    localNormal: {x: 0.62196726, y: 0.7603028, z: -0.18734065}
+    scale: 0.0016536618
+    confidence: 0.12790476
+    randomSeed: 0.050873168
+  - localPosition: {x: -0.035299, y: 0.01626, z: 0.00778}
+    localNormal: {x: -0.6875492, y: 0.7036872, z: 0.17916618}
+    scale: 0.0017222852
+    confidence: 0.12750958
+    randomSeed: 0.30591813
+  - localPosition: {x: -0.021244, y: 0.000112, z: -0.037649}
+    localNormal: {x: -0.28977755, y: 0.2439464, z: -0.92548317}
+    scale: 0.0016397442
+    confidence: 0.12728852
+    randomSeed: 0.34409466
+  - localPosition: {x: -0.00436, y: 0.002322, z: -0.041504}
+    localNormal: {x: 0.10011936, y: 0.5879257, z: -0.8026952}
+    scale: 0.0017192846
+    confidence: 0.12717894
+    randomSeed: 0.45226794
+  - localPosition: {x: 0.034151, y: -0.003838, z: -0.022137}
+    localNormal: {x: 0.7904817, y: 0.551051, z: -0.26736015}
+    scale: 0.0018920125
+    confidence: 0.12716982
+    randomSeed: 0.3997472
+  - localPosition: {x: -0.032349, y: 0.017353, z: 0.01335}
+    localNormal: {x: -0.48552305, y: 0.7542152, z: 0.4420711}
+    scale: 0.0016639356
+    confidence: 0.12716301
+    randomSeed: 0.16375805
+  - localPosition: {x: -0.029778, y: 0.014355, z: -0.021178}
+    localNormal: {x: -0.4449914, y: 0.5494451, z: -0.70717233}
+    scale: 0.0020657338
+    confidence: 0.12691797
+    randomSeed: 0.78881013
+  - localPosition: {x: -0.031676, y: 0.019766, z: 0.010187}
+    localNormal: {x: -0.46356332, y: 0.82134, z: 0.3324299}
+    scale: 0.0021443632
+    confidence: 0.12688932
+    randomSeed: 0.018007757
+  - localPosition: {x: -0.031595, y: 0.015082, z: 0.020143}
+    localNormal: {x: -0.39379463, y: 0.49925268, z: 0.77179825}
+    scale: 0.00201053
+    confidence: 0.12688093
+    randomSeed: 0.27629295
+  - localPosition: {x: 0.011956, y: 0.011517, z: 0.030777}
+    localNormal: {x: 0.54775786, y: 0.65050715, z: 0.52611953}
+    scale: 0.0016754132
+    confidence: 0.12683345
+    randomSeed: 0.8716501
+  - localPosition: {x: -0.019129, y: 0.022975, z: -0.010488}
+    localNormal: {x: -0.12932129, y: 0.95186234, z: -0.27791014}
+    scale: 0.0021038088
+    confidence: 0.12679608
+    randomSeed: 0.96854293
+  - localPosition: {x: -0.011582, y: 0.02244, z: -0.015321}
+    localNormal: {x: 0.41191524, y: 0.8411997, z: -0.35029832}
+    scale: 0.0020605696
+    confidence: 0.12665102
+    randomSeed: 0.1811731
+  - localPosition: {x: -0.039292, y: 0.013045, z: -0.009844}
+    localNormal: {x: -0.8545204, y: 0.50024366, z: -0.13982569}
+    scale: 0.0018050756
+    confidence: 0.12590195
+    randomSeed: 0.45445138
+  - localPosition: {x: 0.002671, y: -0.009462, z: 0.047167}
+    localNormal: {x: 0.10117734, y: 0.008297492, z: 0.9948338}
+    scale: 0.0021972503
+    confidence: 0.12586074
+    randomSeed: 0.66301817
+  - localPosition: {x: 0.032818, y: -0.001901, z: -0.018323}
+    localNormal: {x: 0.6006872, y: 0.58293945, z: -0.54713476}
+    scale: 0.0022435237
+    confidence: 0.12577875
+    randomSeed: 0.6282125
+  - localPosition: {x: 0.030143, y: 0.007011, z: 0.003826}
+    localNormal: {x: 0.5781641, y: 0.8093078, z: 0.10366838}
+    scale: 0.001667569
+    confidence: 0.12559791
+    randomSeed: 0.43117613
+  - localPosition: {x: 0.041222, y: -0.003562, z: 0.010526}
+    localNormal: {x: 0.83105433, y: -0.014083569, z: 0.5560129}
+    scale: 0.0021084012
+    confidence: 0.12537962
+    randomSeed: 0.67361945
+  - localPosition: {x: 0.031856, y: 0.005476, z: 0.014515}
+    localNormal: {x: 0.69889873, y: 0.699584, z: 0.14873728}
+    scale: 0.0015662514
+    confidence: 0.1253241
+    randomSeed: 0.6934554
+  - localPosition: {x: 0.004674, y: -0.002105, z: -0.045354}
+    localNormal: {x: 0.11494669, y: 0.40473437, z: -0.907181}
+    scale: 0.0022717423
+    confidence: 0.12460611
+    randomSeed: 0.6022832
+  - localPosition: {x: 0.016418, y: 0.016216, z: 0.016776}
+    localNormal: {x: 0.54730153, y: 0.8093742, z: 0.21301292}
+    scale: 0.0015464862
+    confidence: 0.123971544
+    randomSeed: 0.27129403
+  - localPosition: {x: 0.022069, y: 0.012043, z: 0.015102}
+    localNormal: {x: 0.5188709, y: 0.7940364, z: 0.31666905}
+    scale: 0.0018001064
+    confidence: 0.12391722
+    randomSeed: 0.56017023
+  - localPosition: {x: 0.021277, y: 0.00892, z: -0.024493}
+    localNormal: {x: 0.62193054, y: 0.7214833, z: -0.30440822}
+    scale: 0.0020737385
+    confidence: 0.12346767
+    randomSeed: 0.47621542
+  - localPosition: {x: -0.018631, y: -0.004321, z: -0.041205}
+    localNormal: {x: -0.4274298, y: 0.12688053, z: -0.8951006}
+    scale: 0.0022081728
+    confidence: 0.12311812
+    randomSeed: 0.75111747
+  - localPosition: {x: -0.028201, y: 0.020888, z: 0.012622}
+    localNormal: {x: -0.5453505, y: 0.805106, z: 0.23323219}
+    scale: 0.0019316926
+    confidence: 0.12308025
+    randomSeed: 0.3589733
+  - localPosition: {x: 0.00849, y: -0.018791, z: 0.048635}
+    localNormal: {x: 0.36488384, y: -0.054586682, z: 0.9294515}
+    scale: 0.0016711643
+    confidence: 0.123009644
+    randomSeed: 0.5002983
+  - localPosition: {x: 0.018044, y: 0.00689, z: 0.0339}
+    localNormal: {x: 0.41682696, y: 0.74571395, z: 0.5197749}
+    scale: 0.0017872233
+    confidence: 0.12297913
+    randomSeed: 0.10201289
+  - localPosition: {x: 0.027164, y: 0.00812, z: -0.014622}
+    localNormal: {x: 0.606675, y: 0.6671518, z: -0.43226597}
+    scale: 0.0014684275
+    confidence: 0.12287389
+    randomSeed: 0.2720088
+  - localPosition: {x: 0.012553, y: 0.010668, z: -0.028561}
+    localNormal: {x: 0.3567794, y: 0.8059475, z: -0.47239515}
+    scale: 0.0015325389
+    confidence: 0.122288145
+    randomSeed: 0.15540887
+  - localPosition: {x: 0.008865, y: 0.019356, z: 0.018152}
+    localNormal: {x: 0.3465336, y: 0.93781805, z: 0.020293865}
+    scale: 0.0018271853
+    confidence: 0.12206398
+    randomSeed: 0.7652718
+  - localPosition: {x: 0.016718, y: 0.017554, z: 0.01103}
+    localNormal: {x: 0.6319503, y: 0.7528972, z: -0.18380575}
+    scale: 0.0021147353
+    confidence: 0.12186154
+    randomSeed: 0.93225956
+  - localPosition: {x: 0.002085, y: 0.018233, z: -0.021159}
+    localNormal: {x: 0.2244979, y: 0.94604874, z: -0.23365037}
+    scale: 0.0023661298
+    confidence: 0.12184129
+    randomSeed: 0.17791547
+  - localPosition: {x: 0.037712, y: 0.000634, z: -0.006724}
+    localNormal: {x: 0.93127024, y: 0.33478928, z: -0.14370781}
+    scale: 0.0017378677
+    confidence: 0.12153407
+    randomSeed: 0.5218764
+  - localPosition: {x: 0.029143, y: 0.00605, z: 0.023806}
+    localNormal: {x: 0.6277835, y: 0.6295825, z: 0.45772675}
+    scale: 0.001665341
+    confidence: 0.12148865
+    randomSeed: 0.6720142
+  - localPosition: {x: 0.022896, y: -0.00697, z: -0.037003}
+    localNormal: {x: 0.79390305, y: 0.03533559, z: -0.60701674}
+    scale: 0.0017174932
+    confidence: 0.12140008
+    randomSeed: 0.43062562
+  - localPosition: {x: -0.042032, y: -0.006251, z: -0.019611}
+    localNormal: {x: -0.8548181, y: 0.21992536, z: -0.47002003}
+    scale: 0.0018466474
+    confidence: 0.121397905
+    randomSeed: 0.15128256
+  - localPosition: {x: -0.018901, y: 0.012596, z: -0.031798}
+    localNormal: {x: -0.2059998, y: 0.56536186, z: -0.7987053}
+    scale: 0.0019823867
+    confidence: 0.12130411
+    randomSeed: 0.25598875
+  - localPosition: {x: -0.013906, y: -0.007253, z: 0.041199}
+    localNormal: {x: -0.32183322, y: -0.1081999, z: 0.94059354}
+    scale: 0.0014636851
+    confidence: 0.12119519
+    randomSeed: 0.88048875
+  - localPosition: {x: 0.028327, y: 0.003616, z: -0.015575}
+    localNormal: {x: 0.7173474, y: 0.6140438, z: -0.32918537}
+    scale: 0.0019309162
+    confidence: 0.120887935
+    randomSeed: 0.2390981
+  - localPosition: {x: -0.040927, y: 0.013104, z: -0.004026}
+    localNormal: {x: -0.82329637, y: 0.55759674, z: -0.10615558}
+    scale: 0.001651484
+    confidence: 0.12055175
+    randomSeed: 0.5010466
+  - localPosition: {x: -0.008218, y: 0.023991, z: -0.012595}
+    localNormal: {x: 0.19310191, y: 0.91318905, z: -0.35888365}
+    scale: 0.0022884523
+    confidence: 0.12029847
+    randomSeed: 0.26926222
+  - localPosition: {x: 0.027033, y: 0.008307, z: 0.01688}
+    localNormal: {x: 0.7062431, y: 0.707957, z: 0.0041903616}
+    scale: 0.0014558291
+    confidence: 0.12016292
+    randomSeed: 0.3468863
+  - localPosition: {x: 0.032637, y: 0.006038, z: -0.00518}
+    localNormal: {x: 0.72421163, y: 0.6880662, z: -0.045633785}
+    scale: 0.0016352056
+    confidence: 0.11997856
+    randomSeed: 0.889429
+  - localPosition: {x: 0.033307, y: 0.003662, z: 0.020367}
+    localNormal: {x: 0.6766492, y: 0.60624003, z: 0.41787422}
+    scale: 0.002214849
+    confidence: 0.119800575
+    randomSeed: 0.80923533
+  - localPosition: {x: 0.017924, y: 0.015772, z: -0.01317}
+    localNormal: {x: 0.41641155, y: 0.8743724, z: -0.2491471}
+    scale: 0.0022385402
+    confidence: 0.119774565
+    randomSeed: 0.68480176
+  - localPosition: {x: 0.019626, y: 0.015267, z: 0.0138}
+    localNormal: {x: 0.59466195, y: 0.79907, z: 0.08868094}
+    scale: 0.002294648
+    confidence: 0.119532555
+    randomSeed: 0.75755954
+  - localPosition: {x: -0.009513, y: 0.012128, z: -0.035669}
+    localNormal: {x: -0.1989819, y: 0.67517704, z: -0.71031135}
+    scale: 0.0019735806
+    confidence: 0.11908014
+    randomSeed: 0.3703541
+  - localPosition: {x: -0.029691, y: 0.012975, z: -0.025083}
+    localNormal: {x: -0.5163034, y: 0.776768, z: -0.36064133}
+    scale: 0.001607375
+    confidence: 0.11904186
+    randomSeed: 0.18314363
+  - localPosition: {x: -0.037623, y: 0.012307, z: 0.01586}
+    localNormal: {x: -0.73929983, y: 0.6034325, z: 0.29883957}
+    scale: 0.0021915112
+    confidence: 0.11874865
+    randomSeed: 0.1211815
+  - localPosition: {x: 0.024539, y: 0.00665, z: 0.02691}
+    localNormal: {x: 0.49867702, y: 0.54058313, z: 0.6775626}
+    scale: 0.0016409322
+    confidence: 0.11861312
+    randomSeed: 0.32545486
+  - localPosition: {x: -0.025182, y: 0.018133, z: -0.01733}
+    localNormal: {x: -0.13852498, y: 0.7842693, z: -0.6047583}
+    scale: 0.0021040537
+    confidence: 0.118602805
+    randomSeed: 0.62051874
+  - localPosition: {x: 0.02412, y: 0.01202, z: -0.010778}
+    localNormal: {x: 0.64184403, y: 0.7632981, z: -0.073567644}
+    scale: 0.0018127913
+    confidence: 0.118542
+    randomSeed: 0.37698847
+  - localPosition: {x: 0.028852, y: -0.000863, z: -0.026066}
+    localNormal: {x: 0.5979597, y: 0.7233379, z: -0.34529194}
+    scale: 0.0022007693
+    confidence: 0.11837067
+    randomSeed: 0.8368944
+  - localPosition: {x: -0.014087, y: 0.011221, z: -0.035519}
+    localNormal: {x: -0.042987745, y: 0.6422776, z: -0.7652657}
+    scale: 0.0015599985
+    confidence: 0.11821849
+    randomSeed: 0.8454002
+  - localPosition: {x: 0.00171, y: -0.009155, z: -0.046173}
+    localNormal: {x: 0.2503783, y: -0.21572326, z: -0.9438083}
+    scale: 0.0021004376
+    confidence: 0.11818781
+    randomSeed: 0.027692918
+  - localPosition: {x: -0.029325, y: -0.000377, z: -0.034177}
+    localNormal: {x: -0.7082336, y: 0.30733937, z: -0.6355688}
+    scale: 0.0018495732
+    confidence: 0.1180981
+    randomSeed: 0.8938813
+  - localPosition: {x: -0.010747, y: 0.002231, z: 0.041548}
+    localNormal: {x: -0.16870734, y: 0.44565794, z: 0.8791626}
+    scale: 0.0017951925
+    confidence: 0.11781181
+    randomSeed: 0.6309479
+  - localPosition: {x: -0.004087, y: 0.020847, z: -0.020006}
+    localNormal: {x: 0.17813502, y: 0.8242337, z: -0.53750044}
+    scale: 0.0023434644
+    confidence: 0.1177342
+    randomSeed: 0.5472309
+  - localPosition: {x: 0.03162, y: -0.005134, z: -0.026325}
+    localNormal: {x: 0.849344, y: -0.10312604, z: -0.51766765}
+    scale: 0.0020934904
+    confidence: 0.117666915
+    randomSeed: 0.7628715
+  - localPosition: {x: -0.008438, y: 0.024668, z: 0.01559}
+    localNormal: {x: -0.28456116, y: 0.9031293, z: 0.3215315}
+    scale: 0.0019431713
+    confidence: 0.11763443
+    randomSeed: 0.06417144
+  - localPosition: {x: -0.001307, y: -0.002091, z: -0.046423}
+    localNormal: {x: 0.030664528, y: 0.60265666, z: -0.7974112}
+    scale: 0.0022619362
+    confidence: 0.11734016
+    randomSeed: 0.93984306
+  - localPosition: {x: -0.004173, y: 0.024456, z: 0.018257}
+    localNormal: {x: 0.25288287, y: 0.86827815, z: 0.4267825}
+    scale: 0.0021516983
+    confidence: 0.11730878
+    randomSeed: 0.06913651
+  - localPosition: {x: 0.003397, y: 0.021666, z: -0.008373}
+    localNormal: {x: 0.23203601, y: 0.8998898, z: -0.36926633}
+    scale: 0.001760157
+    confidence: 0.11693947
+    randomSeed: 0.03019822
+  - localPosition: {x: -0.039338, y: 0.007386, z: 0.018987}
+    localNormal: {x: -0.9039756, y: 0.25329477, z: 0.3444849}
+    scale: 0.0019371998
+    confidence: 0.11693109
+    randomSeed: 0.7825242
+  - localPosition: {x: 0.007743, y: 0.017578, z: -0.018554}
+    localNormal: {x: 0.48456067, y: 0.7620827, z: -0.4294543}
+    scale: 0.0014371041
+    confidence: 0.11673367
+    randomSeed: 0.63806957
+  - localPosition: {x: 0.011569, y: 0.019921, z: -0.00257}
+    localNormal: {x: 0.30280325, y: 0.92887, z: -0.2133325}
+    scale: 0.0015950982
+    confidence: 0.11659695
+    randomSeed: 0.018525125
+  - localPosition: {x: 0.025566, y: 0.002506, z: -0.028215}
+    localNormal: {x: 0.5794679, y: 0.7164891, z: -0.38840753}
+    scale: 0.0016269699
+    confidence: 0.116315044
+    randomSeed: 0.004225493
+  - localPosition: {x: 0.02352, y: 0.002555, z: 0.032286}
+    localNormal: {x: 0.6004937, y: 0.48558262, z: 0.63530844}
+    scale: 0.001447778
+    confidence: 0.116059415
+    randomSeed: 0.34525886
+  - localPosition: {x: -0.044798, y: -0.000653, z: -0.002143}
+    localNormal: {x: -0.99830127, y: -0.055701595, z: 0.017085725}
+    scale: 0.0022334047
+    confidence: 0.11583928
+    randomSeed: 0.77085173
+  - localPosition: {x: 0.03189, y: 0.005164, z: 0.008552}
+    localNormal: {x: 0.58720964, y: 0.80885625, z: -0.030600153}
+    scale: 0.0019168406
+    confidence: 0.11578827
+    randomSeed: 0.27498487
+  - localPosition: {x: 0.006648, y: 0.005887, z: 0.039149}
+    localNormal: {x: 0.11725775, y: 0.5374818, z: 0.8350832}
+    scale: 0.0020030993
+    confidence: 0.11558278
+    randomSeed: 0.83782244
+  - localPosition: {x: -0.000545, y: 0.017534, z: -0.027902}
+    localNormal: {x: 0.2105579, y: 0.8813102, z: -0.4230339}
+    scale: 0.0020154882
+    confidence: 0.11554635
+    randomSeed: 0.009214045
+  - localPosition: {x: -0.033198, y: 0.015378, z: -0.017225}
+    localNormal: {x: -0.66766006, y: 0.7024624, z: -0.24652919}
+    scale: 0.0023452423
+    confidence: 0.115451165
+    randomSeed: 0.7213549
+  - localPosition: {x: -0.002327, y: -0.000708, z: 0.043012}
+    localNormal: {x: 0.13111676, y: 0.4864635, z: 0.8638065}
+    scale: 0.0014471336
+    confidence: 0.115318984
+    randomSeed: 0.8975152
+  - localPosition: {x: 0.040079, y: -0.003168, z: 0.002707}
+    localNormal: {x: 0.7045965, y: 0.6896292, z: 0.16719839}
+    scale: 0.0017409186
+    confidence: 0.115263395
+    randomSeed: 0.37534922
+  - localPosition: {x: -0.041008, y: -0.016263, z: -0.022114}
+    localNormal: {x: -0.7439408, y: -0.16234423, z: -0.6482257}
+    scale: 0.0018783463
+    confidence: 0.115202956
+    randomSeed: 0.59879917
+  - localPosition: {x: -0.038424, y: -0.011433, z: -0.02252}
+    localNormal: {x: -0.6155436, y: 0.016406372, z: -0.78793204}
+    scale: 0.0016067314
+    confidence: 0.11499997
+    randomSeed: 0.5452388
+  - localPosition: {x: -0.031302, y: 0.006347, z: -0.027613}
+    localNormal: {x: -0.44416198, y: 0.58883846, z: -0.67526996}
+    scale: 0.0018313392
+    confidence: 0.11452334
+    randomSeed: 0.49101943
+  - localPosition: {x: 0.010537, y: 0.019591, z: -0.012407}
+    localNormal: {x: 0.30367106, y: 0.92158943, z: -0.24177855}
+    scale: 0.0017643198
+    confidence: 0.11443822
+    randomSeed: 0.8581481
+  - localPosition: {x: -0.003913, y: 0.014912, z: -0.02948}
+    localNormal: {x: 0.12906234, y: 0.72536016, z: -0.6761624}
+    scale: 0.0019533164
+    confidence: 0.11421942
+    randomSeed: 0.8910332
+  - localPosition: {x: -0.038184, y: -0.002839, z: -0.024896}
+    localNormal: {x: -0.58703184, y: 0.31891313, z: -0.7441022}
+    scale: 0.0015452077
+    confidence: 0.11391574
+    randomSeed: 0.5230767
+  - localPosition: {x: 0.018557, y: -0.008709, z: 0.042397}
+    localNormal: {x: 0.38026878, y: 0.54729044, z: 0.7455661}
+    scale: 0.0021613115
+    confidence: 0.11350137
+    randomSeed: 0.3962584
+  - localPosition: {x: -0.021423, y: 0.025042, z: 0.003113}
+    localNormal: {x: -0.40791205, y: 0.893465, z: 0.18795767}
+    scale: 0.0015120762
+    confidence: 0.11344987
+    randomSeed: 0.30548742
+  - localPosition: {x: 0.004163, y: -0.019582, z: 0.030561}
+    localNormal: {x: 0.43921542, y: 0.76852536, z: 0.46525106}
+    scale: 0.0018879095
+    confidence: 0.11333236
+    randomSeed: 0.051850803
+  - localPosition: {x: -0.024606, y: -0.003881, z: 0.033091}
+    localNormal: {x: -0.6312691, y: -0.09341228, z: 0.76991785}
+    scale: 0.0018859109
+    confidence: 0.113183305
+    randomSeed: 0.91177917
+  - localPosition: {x: 0.026625, y: -0.000476, z: 0.03468}
+    localNormal: {x: 0.3702923, y: 0.74550945, z: 0.5541655}
+    scale: 0.0019118845
+    confidence: 0.11294449
+    randomSeed: 0.6670719
+  - localPosition: {x: -0.000518, y: -0.018175, z: 0.030793}
+    localNormal: {x: 0.34180832, y: 0.7920026, z: 0.50586456}
+    scale: 0.0019975395
+    confidence: 0.11264727
+    randomSeed: 0.12620677
+  - localPosition: {x: -0.010268, y: 0.004438, z: -0.041155}
+    localNormal: {x: -0.002508595, y: 0.61610574, z: -0.78765947}
+    scale: 0.0022650566
+    confidence: 0.11244877
+    randomSeed: 0.8360628
+  - localPosition: {x: -0.026723, y: 0.009119, z: -0.031777}
+    localNormal: {x: -0.6108127, y: 0.44200572, z: -0.65691614}
+    scale: 0.001700945
+    confidence: 0.11238359
+    randomSeed: 0.9283626
+  - localPosition: {x: 0.026775, y: -0.003746, z: -0.029766}
+    localNormal: {x: 0.4525708, y: 0.62981397, z: -0.63127977}
+    scale: 0.002201654
+    confidence: 0.1121199
+    randomSeed: 0.46430475
+  - localPosition: {x: -0.015954, y: -0.013547, z: -0.042776}
+    localNormal: {x: -0.6150332, y: -0.28767762, z: -0.7341497}
+    scale: 0.0019749145
+    confidence: 0.112094864
+    randomSeed: 0.03780568
+  - localPosition: {x: -0.021163, y: 0.018908, z: -0.023254}
+    localNormal: {x: -0.10251147, y: 0.96548486, z: -0.23943764}
+    scale: 0.0020365843
+    confidence: 0.11209372
+    randomSeed: 0.47515148
+  - localPosition: {x: -0.02165, y: 0.014806, z: -0.0302}
+    localNormal: {x: -0.46960196, y: 0.65690744, z: -0.58987004}
+    scale: 0.0015777376
+    confidence: 0.1120417
+    randomSeed: 0.68749064
+  - localPosition: {x: 0.019212, y: 0.016615, z: -0.004281}
+    localNormal: {x: 0.59901536, y: 0.79210633, z: -0.11725248}
+    scale: 0.0023107184
+    confidence: 0.11199784
+    randomSeed: 0.5000792
+  - localPosition: {x: 0.0201, y: 0.013028, z: 0.022789}
+    localNormal: {x: 0.48845536, y: 0.7492209, z: 0.44730246}
+    scale: 0.0023748768
+    confidence: 0.111413814
+    randomSeed: 0.5448367
+  - localPosition: {x: -0.001725, y: 0.016587, z: 0.030412}
+    localNormal: {x: -0.15233432, y: 0.83416337, z: 0.530062}
+    scale: 0.0018195348
+    confidence: 0.11140762
+    randomSeed: 0.17846705
+  - localPosition: {x: 0.010067, y: 0.002624, z: -0.038956}
+    localNormal: {x: 0.6906934, y: 0.4980774, z: -0.5242725}
+    scale: 0.0016245447
+    confidence: 0.111389235
+    randomSeed: 0.03693557
+  - localPosition: {x: -0.024116, y: 0.022397, z: -0.009968}
+    localNormal: {x: -0.41744336, y: 0.89883095, z: -0.13358125}
+    scale: 0.002350598
+    confidence: 0.111250065
+    randomSeed: 0.427002
+  - localPosition: {x: 0.030138, y: 0.003001, z: 0.028053}
+    localNormal: {x: 0.711287, y: 0.5745073, z: 0.40498418}
+    scale: 0.0019394248
+    confidence: 0.11124491
+    randomSeed: 0.6962823
+  - localPosition: {x: 0.002448, y: 0.003843, z: -0.04089}
+    localNormal: {x: 0.4034909, y: 0.61466646, z: -0.677776}
+    scale: 0.0023347833
+    confidence: 0.1111798
+    randomSeed: 0.40905887
+  - localPosition: {x: 0.01856, y: 0.001397, z: 0.037087}
+    localNormal: {x: 0.5757595, y: 0.35480577, z: 0.73662335}
+    scale: 0.0018296789
+    confidence: 0.111169726
+    randomSeed: 0.048636444
+  - localPosition: {x: -0.003045, y: 0.010415, z: -0.036722}
+    localNormal: {x: 0.14539117, y: 0.53124183, z: -0.8346517}
+    scale: 0.0021085772
+    confidence: 0.11099372
+    randomSeed: 0.67114955
+  - localPosition: {x: -0.016943, y: 0.026039, z: 0.007423}
+    localNormal: {x: 0.027554037, y: 0.89338183, z: 0.4484526}
+    scale: 0.001831865
+    confidence: 0.11068313
+    randomSeed: 0.7014752
+  - localPosition: {x: 0.004091, y: 0.022779, z: 0.016137}
+    localNormal: {x: 0.44069374, y: 0.8802407, z: 0.17596984}
+    scale: 0.0022066296
+    confidence: 0.11037739
+    randomSeed: 0.62331814
+  - localPosition: {x: -0.01987, y: 0.021725, z: -0.019988}
+    localNormal: {x: -0.07268958, y: 0.90395397, z: -0.42140663}
+    scale: 0.0015632515
+    confidence: 0.11028647
+    randomSeed: 0.6609748
+  - localPosition: {x: -0.005422, y: 0.019962, z: -0.023967}
+    localNormal: {x: 0.08783811, y: 0.891158, z: -0.44510886}
+    scale: 0.0018710339
+    confidence: 0.11017043
+    randomSeed: 0.38062638
+  - localPosition: {x: 0.027728, y: 0.000975, z: -0.022579}
+    localNormal: {x: 0.58760047, y: 0.5843241, z: -0.5597241}
+    scale: 0.0023383587
+    confidence: 0.10996556
+    randomSeed: 0.23224285
+  - localPosition: {x: 0.007182, y: 0.015468, z: 0.030648}
+    localNormal: {x: 0.16150431, y: 0.86715925, z: 0.471117}
+    scale: 0.001843865
+    confidence: 0.10987526
+    randomSeed: 0.42638654
+  - localPosition: {x: 0.008965, y: 0.00615, z: -0.035335}
+    localNormal: {x: 0.26352152, y: 0.89422506, z: -0.361826}
+    scale: 0.0021058058
+    confidence: 0.109812595
+    randomSeed: 0.17298009
+  - localPosition: {x: -0.005464, y: 0.024594, z: -0.002153}
+    localNormal: {x: 0.048312202, y: 0.90951204, z: -0.41286045}
+    scale: 0.0015081983
+    confidence: 0.10975571
+    randomSeed: 0.75248015
+  - localPosition: {x: 0.024799, y: -0.007049, z: 0.04097}
+    localNormal: {x: 0.59112275, y: 0.13447033, z: 0.79529345}
+    scale: 0.0020188724
+    confidence: 0.10942669
+    randomSeed: 0.37936252
+  - localPosition: {x: -0.037917, y: 0.006212, z: -0.020919}
+    localNormal: {x: -0.59104663, y: 0.55267626, z: -0.5875482}
+    scale: 0.0014784817
+    confidence: 0.109369665
+    randomSeed: 0.6831692
+  - localPosition: {x: -0.027966, y: 0.021141, z: -0.009544}
+    localNormal: {x: -0.28989816, y: 0.9366588, z: -0.19654343}
+    scale: 0.0020894373
+    confidence: 0.10932467
+    randomSeed: 0.7493704
+  - localPosition: {x: 0.005791, y: 0.013951, z: -0.029789}
+    localNormal: {x: 0.4230379, y: 0.5944045, z: -0.6839022}
+    scale: 0.0022556589
+    confidence: 0.10932267
+    randomSeed: 0.84723175
+  - localPosition: {x: -0.025319, y: 0.022372, z: 0.00021}
+    localNormal: {x: -0.27289534, y: 0.9565018, z: -0.10311334}
+    scale: 0.0019040969
+    confidence: 0.10916034
+    randomSeed: 0.16301931
+  - localPosition: {x: -0.037986, y: 0.015259, z: -0.000455}
+    localNormal: {x: -0.55029666, y: 0.82793224, z: -0.10817525}
+    scale: 0.0023466465
+    confidence: 0.109019056
+    randomSeed: 0.21061698
+  - localPosition: {x: -0.004719, y: -0.013236, z: 0.047012}
+    localNormal: {x: -0.30188167, y: 0.16339341, z: 0.9392391}
+    scale: 0.0018805766
+    confidence: 0.10806884
+    randomSeed: 0.64254147
+  - localPosition: {x: -0.026536, y: 0.003801, z: 0.031128}
+    localNormal: {x: -0.56068504, y: 0.26901135, z: 0.7831125}
+    scale: 0.0019944075
+    confidence: 0.107903816
+    randomSeed: 0.07618869
+  - localPosition: {x: 0.009714, y: 0.019536, z: -0.00787}
+    localNormal: {x: 0.5568585, y: 0.8181328, z: -0.14341341}
+    scale: 0.0021819149
+    confidence: 0.10778823
+    randomSeed: 0.22520724
+  - localPosition: {x: 0.01462, y: 0.013772, z: 0.02613}
+    localNormal: {x: 0.5033735, y: 0.8312633, z: 0.23583148}
+    scale: 0.0015762652
+    confidence: 0.1076527
+    randomSeed: 0.44968826
+  - localPosition: {x: -0.013796, y: 0.026961, z: 0.003681}
+    localNormal: {x: 0.059018135, y: 0.9963334, z: -0.061940484}
+    scale: 0.0018142208
+    confidence: 0.107581146
+    randomSeed: 0.76835763
+  - localPosition: {x: -0.013244, y: 0.019457, z: -0.024607}
+    localNormal: {x: 0.00083284074, y: 0.9769115, z: -0.21364298}
+    scale: 0.0020614755
+    confidence: 0.10754342
+    randomSeed: 0.465226
+  - localPosition: {x: 0.012613, y: -0.006131, z: -0.044285}
+    localNormal: {x: 0.4103552, y: -0.02279377, z: -0.9116409}
+    scale: 0.0023472304
+    confidence: 0.10751537
+    randomSeed: 0.32834437
+  - localPosition: {x: 0.025008, y: 0.0132, z: -0.002447}
+    localNormal: {x: 0.6674586, y: 0.742798, z: 0.05244275}
+    scale: 0.0015382536
+    confidence: 0.10750901
+    randomSeed: 0.45622033
+  - localPosition: {x: -0.01346, y: 0.024581, z: 0.017093}
+    localNormal: {x: -0.09313683, y: 0.9600549, z: 0.26385632}
+    scale: 0.0014499932
+    confidence: 0.10744521
+    randomSeed: 0.95823026
+  - localPosition: {x: 0.032718, y: 0.002304, z: -0.014644}
+    localNormal: {x: 0.51463014, y: 0.8560482, z: -0.048345357}
+    scale: 0.002324562
+    confidence: 0.10711334
+    randomSeed: 0.9149711
+  - localPosition: {x: -0.041353, y: 0.009954, z: 0.010724}
+    localNormal: {x: -0.80515254, y: 0.5711731, z: 0.1596581}
+    scale: 0.0017991151
+    confidence: 0.10693612
+    randomSeed: 0.59538347
+  - localPosition: {x: -0.009177, y: 0.010778, z: 0.036665}
+    localNormal: {x: 0.15113044, y: 0.67190456, z: 0.72505444}
+    scale: 0.0019420714
+    confidence: 0.106492646
+    randomSeed: 0.34707883
+  - localPosition: {x: -0.01635, y: 0.005684, z: -0.037971}
+    localNormal: {x: -0.040218044, y: 0.6852973, z: -0.72715205}
+    scale: 0.0022125894
+    confidence: 0.10639415
+    randomSeed: 0.39653486
+  - localPosition: {x: 0.002285, y: -0.002967, z: 0.044944}
+    localNormal: {x: 0.22234231, y: 0.2758318, z: 0.9351367}
+    scale: 0.0022822004
+    confidence: 0.106382094
+    randomSeed: 0.8909278
+  - localPosition: {x: -0.035639, y: -0.004246, z: 0.026533}
+    localNormal: {x: -0.8833692, y: 0.006555089, z: 0.46863198}
+    scale: 0.0021584393
+    confidence: 0.10624085
+    randomSeed: 0.55461174
+  - localPosition: {x: 0.013276, y: 0.020593, z: 0.005269}
+    localNormal: {x: 0.43555507, y: 0.88805294, z: -0.14715241}
+    scale: 0.0022134022
+    confidence: 0.10601849
+    randomSeed: 0.392276
+  - localPosition: {x: 0.015877, y: 0.019357, z: 0.002271}
+    localNormal: {x: 0.4405863, y: 0.8917502, z: 0.10327288}
+    scale: 0.0021239442
+    confidence: 0.105973706
+    randomSeed: 0.15291609
+  - localPosition: {x: -0.044661, y: -0.011916, z: -0.011505}
+    localNormal: {x: -0.96462464, y: -0.10964418, z: -0.23974451}
+    scale: 0.001768023
+    confidence: 0.10596821
+    randomSeed: 0.6803747
+  - localPosition: {x: -0.006442, y: -0.003287, z: 0.044874}
+    localNormal: {x: -0.06387417, y: 0.38559517, z: 0.9204545}
+    scale: 0.0014984155
+    confidence: 0.10588559
+    randomSeed: 0.19079772
+  - localPosition: {x: -0.025878, y: 0.023384, z: 0.008722}
+    localNormal: {x: -0.17974193, y: 0.9831807, z: -0.032380365}
+    scale: 0.001734666
+    confidence: 0.10574083
+    randomSeed: 0.045163874
+  - localPosition: {x: -0.017133, y: 0.025894, z: -0.00283}
+    localNormal: {x: -0.31238773, y: 0.8956486, z: -0.3165873}
+    scale: 0.0022647418
+    confidence: 0.105563775
+    randomSeed: 0.56325716
+  - localPosition: {x: 0.017881, y: -0.003256, z: -0.037966}
+    localNormal: {x: 0.66490126, y: 0.30309954, z: -0.682669}
+    scale: 0.0019217836
+    confidence: 0.10551654
+    randomSeed: 0.87505555
+  - localPosition: {x: 0.005141, y: 0.023779, z: -0.005407}
+    localNormal: {x: 0.36878315, y: 0.92020845, z: -0.13120754}
+    scale: 0.0015655425
+    confidence: 0.10549192
+    randomSeed: 0.1526276
+  - localPosition: {x: -0.036306, y: 0.01309, z: -0.017591}
+    localNormal: {x: -0.57846993, y: 0.7462874, z: -0.32928362}
+    scale: 0.0023401112
+    confidence: 0.105140105
+    randomSeed: 0.8788409
+  - localPosition: {x: -0.010529, y: 0.020788, z: -0.019581}
+    localNormal: {x: 0.3039214, y: 0.8883015, z: -0.3443142}
+    scale: 0.0015156589
+    confidence: 0.1051271
+    randomSeed: 0.46333796
+  - localPosition: {x: -0.010246, y: 0.024594, z: -0.006497}
+    localNormal: {x: -0.10480385, y: 0.99431205, z: -0.01896606}
+    scale: 0.0018943194
+    confidence: 0.105122134
+    randomSeed: 0.530783
+  - localPosition: {x: -0.032938, y: -0.013914, z: -0.02931}
+    localNormal: {x: -0.55551094, y: -0.14823812, z: -0.8181889}
+    scale: 0.0019998976
+    confidence: 0.10510647
+    randomSeed: 0.41654092
+  - localPosition: {x: -0.023522, y: 0.021754, z: 0.013534}
+    localNormal: {x: -0.23061866, y: 0.94591784, z: 0.22815448}
+    scale: 0.0018912556
+    confidence: 0.10480019
+    randomSeed: 0.20160368
+  - localPosition: {x: -0.035231, y: 0.002227, z: -0.027839}
+    localNormal: {x: -0.6598749, y: -0.042798642, z: -0.75015557}
+    scale: 0.001492564
+    confidence: 0.10475349
+    randomSeed: 0.31476346
+  - localPosition: {x: -0.00916, y: 0.008217, z: 0.039513}
+    localNormal: {x: -0.080789044, y: 0.6378369, z: 0.7659225}
+    scale: 0.0017181669
+    confidence: 0.10474566
+    randomSeed: 0.49048072
+  - localPosition: {x: -0.043538, y: -0.013588, z: -0.0074}
+    localNormal: {x: -0.94510907, y: -0.2430603, z: 0.21838178}
+    scale: 0.0018317227
+    confidence: 0.10472848
+    randomSeed: 0.04966379
+  - localPosition: {x: -0.043033, y: 0.0017, z: 0.013821}
+    localNormal: {x: -0.91579163, y: -0.15483992, z: 0.37060806}
+    scale: 0.0020748042
+    confidence: 0.10449453
+    randomSeed: 0.27987233
+  - localPosition: {x: -0.014113, y: 0.005091, z: 0.038316}
+    localNormal: {x: -0.14726502, y: 0.48162255, z: 0.8639171}
+    scale: 0.002266528
+    confidence: 0.10433133
+    randomSeed: 0.32420853
+  - localPosition: {x: -0.008205, y: 0.015563, z: 0.031897}
+    localNormal: {x: -0.18102013, y: 0.5643178, z: 0.805467}
+    scale: 0.0014904083
+    confidence: 0.10420314
+    randomSeed: 0.60503155
+  - localPosition: {x: 0.001974, y: 0.020018, z: 0.02652}
+    localNormal: {x: 0.19954345, y: 0.8991118, z: 0.38959008}
+    scale: 0.0020181763
+    confidence: 0.10381136
+    randomSeed: 0.68216103
+  - localPosition: {x: 0.018794, y: 0.008227, z: 0.029851}
+    localNormal: {x: 0.47613063, y: 0.5376688, z: 0.6958533}
+    scale: 0.0021669308
+    confidence: 0.103719495
+    randomSeed: 0.93564296
+  - localPosition: {x: -0.016723, y: -0.001539, z: 0.037553}
+    localNormal: {x: -0.48585585, y: -0.11587207, z: 0.8663243}
+    scale: 0.0016358318
+    confidence: 0.10371164
+    randomSeed: 0.6547913
+  - localPosition: {x: -0.003325, y: 0.006458, z: 0.039605}
+    localNormal: {x: 0.19227058, y: 0.31609124, z: 0.9290417}
+    scale: 0.0018600193
+    confidence: 0.10369366
+    randomSeed: 0.18881443
+  - localPosition: {x: -0.043045, y: -0.003002, z: 0.014825}
+    localNormal: {x: -0.83729625, y: 0.052259468, z: 0.54424626}
+    scale: 0.002208629
+    confidence: 0.1035373
+    randomSeed: 0.26699153
+  - localPosition: {x: -0.016879, y: -0.01892, z: 0.015376}
+    localNormal: {x: -0.21650337, y: -0.22989081, z: 0.94882905}
+    scale: 0.0017881993
+    confidence: 0.10348352
+    randomSeed: 0.21478906
+  - localPosition: {x: 0.013414, y: -0.012021, z: 0.046185}
+    localNormal: {x: 0.37736675, y: 0.40317383, z: 0.8336937}
+    scale: 0.0023132137
+    confidence: 0.1034564
+    randomSeed: 0.9571959
+  - localPosition: {x: 0.031463, y: 0.004021, z: -0.010214}
+    localNormal: {x: 0.8780891, y: 0.46577665, z: 0.10959805}
+    scale: 0.0018792751
+    confidence: 0.103379115
+    randomSeed: 0.4975571
+  - localPosition: {x: 0.0262, y: 0.009965, z: 0.020561}
+    localNormal: {x: 0.57827365, y: 0.8070319, z: 0.11957861}
+    scale: 0.0021757483
+    confidence: 0.1032231
+    randomSeed: 0.7069821
+  - localPosition: {x: -0.007537, y: 0.019216, z: 0.027292}
+    localNormal: {x: -0.24043214, y: 0.811813, z: 0.5321203}
+    scale: 0.0017685962
+    confidence: 0.103141256
+    randomSeed: 0.79744613
+  - localPosition: {x: -0.010973, y: 0.022902, z: 0.021713}
+    localNormal: {x: -0.054784294, y: 0.9371816, z: 0.34451333}
+    scale: 0.0023708255
+    confidence: 0.10279272
+    randomSeed: 0.6418099
+  - localPosition: {x: -0.035534, y: 0.011092, z: -0.023692}
+    localNormal: {x: -0.71933883, y: 0.61165786, z: -0.32928148}
+    scale: 0.0018382893
+    confidence: 0.1027348
+    randomSeed: 0.59786123
+  - localPosition: {x: 0.008824, y: -0.000587, z: -0.04302}
+    localNormal: {x: 0.40223065, y: 0.54560125, z: -0.7352074}
+    scale: 0.0021286467
+    confidence: 0.10271476
+    randomSeed: 0.08027602
+  - localPosition: {x: -0.005128, y: 0.011039, z: 0.037746}
+    localNormal: {x: -0.2467193, y: 0.65191305, z: 0.7170349}
+    scale: 0.0021776059
+    confidence: 0.10264819
+    randomSeed: 0.80147564
+  - localPosition: {x: -0.02726, y: -0.010781, z: -0.036717}
+    localNormal: {x: -0.44359022, y: -0.25395814, z: -0.8594958}
+    scale: 0.0019234945
+    confidence: 0.10261224
+    randomSeed: 0.10678984
+  - localPosition: {x: 0.014212, y: -0.000666, z: 0.042961}
+    localNormal: {x: 0.35233238, y: 0.5950739, z: 0.722322}
+    scale: 0.00201186
+    confidence: 0.10245819
+    randomSeed: 0.8708401
+  - localPosition: {x: 0.013258, y: -0.017776, z: 0.046997}
+    localNormal: {x: 0.46956432, y: -0.3017855, z: 0.8297198}
+    scale: 0.001681165
+    confidence: 0.10233119
+    randomSeed: 0.21803442
+  - localPosition: {x: -0.018381, y: 0.015134, z: 0.030011}
+    localNormal: {x: -0.14199574, y: 0.82984525, z: 0.5396241}
+    scale: 0.0015358244
+    confidence: 0.1023255
+    randomSeed: 0.9324869
+  - localPosition: {x: 0.018901, y: -0.007833, z: -0.039859}
+    localNormal: {x: 0.64588016, y: 0.066626675, z: -0.76052594}
+    scale: 0.0018809463
+    confidence: 0.10228664
+    randomSeed: 0.6508277
+  - localPosition: {x: 0.005089, y: 0.0002, z: 0.044051}
+    localNormal: {x: 0.1648658, y: 0.35656244, z: 0.91960996}
+    scale: 0.0022212877
+    confidence: 0.10223659
+    randomSeed: 0.9591509
+  - localPosition: {x: -0.027927, y: 0.010013, z: 0.028665}
+    localNormal: {x: -0.51900476, y: 0.4950158, z: 0.6968454}
+    scale: 0.0015405058
+    confidence: 0.10207248
+    randomSeed: 0.41156405
+  - localPosition: {x: -0.020564, y: 0.002448, z: 0.036879}
+    localNormal: {x: -0.50532675, y: 0.51130396, z: 0.6951353}
+    scale: 0.0014788352
+    confidence: 0.10204628
+    randomSeed: 0.68169016
+  - localPosition: {x: 0.000527, y: 0.023693, z: 0.000668}
+    localNormal: {x: 0.15697165, y: 0.94771737, z: -0.277834}
+    scale: 0.0021999173
+    confidence: 0.10193222
+    randomSeed: 0.5885107
+  - localPosition: {x: -0.043519, y: -0.008156, z: -0.011898}
+    localNormal: {x: -0.99835765, y: -0.028902613, z: -0.049463913}
+    scale: 0.0016917646
+    confidence: 0.101901874
+    randomSeed: 0.56472594
+  - localPosition: {x: -0.006613, y: -0.003247, z: -0.045827}
+    localNormal: {x: -0.42272308, y: 0.41668874, z: -0.804783}
+    scale: 0.0018229961
+    confidence: 0.10186718
+    randomSeed: 0.6135525
+  - localPosition: {x: -0.044536, y: -0.009497, z: -0.005175}
+    localNormal: {x: -0.96239406, y: -0.2579592, z: 0.08517515}
+    scale: 0.0019723552
+    confidence: 0.10168052
+    randomSeed: 0.77696633
+  - localPosition: {x: 0.00685, y: -0.014412, z: 0.048277}
+    localNormal: {x: 0.044703413, y: 0.36668545, z: 0.9292704}
+    scale: 0.0017838702
+    confidence: 0.10157907
+    randomSeed: 0.69297856
+  - localPosition: {x: 0.014121, y: 0.007195, z: -0.033781}
+    localNormal: {x: 0.4379374, y: 0.77069664, z: -0.462858}
+    scale: 0.002376523
+    confidence: 0.101536416
+    randomSeed: 0.35055128
+  - localPosition: {x: -0.042311, y: 0.009312, z: 0.000295}
+    localNormal: {x: -0.805722, y: 0.584175, z: -0.09773282}
+    scale: 0.0014702362
+    confidence: 0.1014225
+    randomSeed: 0.9435625
+  - localPosition: {x: -0.028874, y: 0.021753, z: -0.002726}
+    localNormal: {x: -0.42152086, y: 0.9001564, z: -0.10972087}
+    scale: 0.0019640245
+    confidence: 0.101340346
+    randomSeed: 0.79796493
+  - localPosition: {x: -0.028887, y: 0.015688, z: 0.023943}
+    localNormal: {x: -0.6020236, y: 0.6001358, z: 0.52669215}
+    scale: 0.002109929
+    confidence: 0.101227656
+    randomSeed: 0.992144
+  - localPosition: {x: -0.011619, y: -0.004398, z: 0.043371}
+    localNormal: {x: -0.399552, y: -0.06364457, z: 0.91449857}
+    scale: 0.0017859453
+    confidence: 0.10119323
+    randomSeed: 0.5954587
+  - localPosition: {x: -0.0163, y: 0.018726, z: 0.026538}
+    localNormal: {x: -0.2570693, y: 0.8071921, z: 0.5313721}
+    scale: 0.0022504753
+    confidence: 0.10115813
+    randomSeed: 0.8120494
+  - localPosition: {x: -0.013352, y: 0.026651, z: -0.00406}
+    localNormal: {x: 0.09966224, y: 0.96925324, z: -0.22497918}
+    scale: 0.0022712902
+    confidence: 0.101047456
+    randomSeed: 0.81082857
+  - localPosition: {x: 0.01188, y: 0.001506, z: 0.040417}
+    localNormal: {x: 0.46658337, y: 0.41642174, z: 0.78031594}
+    scale: 0.0019365154
+    confidence: 0.10093267
+    randomSeed: 0.13627948
+  - localPosition: {x: 0.012898, y: 0.019056, z: 0.019353}
+    localNormal: {x: 0.25107205, y: 0.9647609, z: 0.07873499}
+    scale: 0.002354924
+    confidence: 0.100655206
+    randomSeed: 0.2641739
+  - localPosition: {x: 0.042016, y: -0.002355, z: 0.006553}
+    localNormal: {x: 0.5648639, y: 0.7512185, z: -0.34146675}
+    scale: 0.0015166351
+    confidence: 0.100441806
+    randomSeed: 0.16283001
+  - localPosition: {x: 0.010859, y: -0.007462, z: 0.046684}
+    localNormal: {x: 0.1478758, y: 0.16499175, z: 0.97514635}
+    scale: 0.0018073437
+    confidence: 0.100209735
+    randomSeed: 0.87801385
+  - localPosition: {x: -0.006942, y: 0.021939, z: -0.015916}
+    localNormal: {x: -0.07301558, y: 0.9471723, z: -0.3123034}
+    scale: 0.0022231543
+    confidence: 0.10009057
+    randomSeed: 0.09918691
+  - localPosition: {x: -0.024677, y: 0.008303, z: 0.03404}
+    localNormal: {x: -0.3788018, y: 0.38632527, z: 0.8409887}
+    scale: 0.0015048119
+    confidence: 0.100090526
+    randomSeed: 0.7890886
+  - localPosition: {x: -0.000025, y: 0.006299, z: -0.03864}
+    localNormal: {x: 0.17819394, y: 0.8273628, z: -0.5326517}
+    scale: 0.0017515686
+    confidence: 0.099969536
+    randomSeed: 0.15864588
+  - localPosition: {x: -0.019388, y: 0.021612, z: 0.0214}
+    localNormal: {x: -0.10487124, y: 0.8990156, z: 0.42517415}
+    scale: 0.0018993152
+    confidence: 0.099947885
+    randomSeed: 0.062786944
+  - localPosition: {x: 0.000634, y: 0.024509, z: 0.016777}
+    localNormal: {x: 0.11193684, y: 0.94373405, z: 0.31118506}
+    scale: 0.0019129686
+    confidence: 0.09954827
+    randomSeed: 0.8387251
+  - localPosition: {x: 0.035265, y: 0.00186, z: 0.017588}
+    localNormal: {x: 0.66846764, y: 0.64598614, z: 0.3685824}
+    scale: 0.0019083781
+    confidence: 0.099436246
+    randomSeed: 0.26877716
+  - localPosition: {x: 0.039323, y: -0.003168, z: 0.020065}
+    localNormal: {x: 0.75946754, y: 0.39477822, z: 0.5170679}
+    scale: 0.0018364709
+    confidence: 0.09938437
+    randomSeed: 0.26879552
+  - localPosition: {x: -0.007317, y: 0.006584, z: -0.038626}
+    localNormal: {x: -0.12047044, y: 0.6638146, z: -0.7381308}
+    scale: 0.0015214002
+    confidence: 0.09936607
+    randomSeed: 0.21822098
+  - localPosition: {x: -0.025788, y: -0.014823, z: -0.035901}
+    localNormal: {x: -0.5442883, y: -0.17952624, z: -0.8194636}
+    scale: 0.0020789052
+    confidence: 0.09929174
+    randomSeed: 0.49797386
+  - localPosition: {x: -0.000342, y: -0.006569, z: 0.047319}
+    localNormal: {x: -0.020817073, y: 0.3592991, z: 0.9329902}
+    scale: 0.0023823602
+    confidence: 0.09910227
+    randomSeed: 0.8685367
+  - localPosition: {x: -0.018226, y: 0.022792, z: -0.014649}
+    localNormal: {x: -0.049567454, y: 0.981925, z: -0.18266453}
+    scale: 0.002192722
+    confidence: 0.09888497
+    randomSeed: 0.2300047
+  - localPosition: {x: -0.015517, y: 0.015232, z: -0.029134}
+    localNormal: {x: -0.1573848, y: 0.8529788, z: -0.4976517}
+    scale: 0.0021432445
+    confidence: 0.09888061
+    randomSeed: 0.21268955
+  - localPosition: {x: -0.021953, y: 0.020461, z: -0.016199}
+    localNormal: {x: -0.25453922, y: 0.946322, z: -0.19920959}
+    scale: 0.0014469693
+    confidence: 0.09866614
+    randomSeed: 0.3702393
+  - localPosition: {x: -0.002504, y: 0.023832, z: -0.010591}
+    localNormal: {x: 0.026656622, y: 0.9970415, z: -0.072094895}
+    scale: 0.002366249
+    confidence: 0.098483115
+    randomSeed: 0.18259038
+  - localPosition: {x: 0.01522, y: 0.017548, z: -0.009675}
+    localNormal: {x: 0.60305756, y: 0.7901435, z: -0.10952129}
+    scale: 0.0018777425
+    confidence: 0.09830425
+    randomSeed: 0.44626552
+  - localPosition: {x: -0.009725, y: -0.007493, z: -0.045306}
+    localNormal: {x: -0.23352925, y: 0.24142647, z: -0.9419009}
+    scale: 0.0016283791
+    confidence: 0.09815189
+    randomSeed: 0.7191722
+  - localPosition: {x: -0.041839, y: 0.008375, z: -0.007068}
+    localNormal: {x: -0.7853662, y: 0.46729898, z: -0.40599456}
+    scale: 0.0022835985
+    confidence: 0.09792206
+    randomSeed: 0.56030446
+  - localPosition: {x: -0.040527, y: -0.001692, z: 0.019434}
+    localNormal: {x: -0.95758396, y: -0.1602734, z: 0.23946904}
+    scale: 0.0015771835
+    confidence: 0.09781099
+    randomSeed: 0.043202642
+  - localPosition: {x: -0.021929, y: -0.009348, z: 0.034315}
+    localNormal: {x: -0.34341162, y: -0.34063506, z: 0.87523496}
+    scale: 0.002241401
+    confidence: 0.09761563
+    randomSeed: 0.81465757
+  - localPosition: {x: 0.042928, y: -0.004598, z: -0.0089}
+    localNormal: {x: 0.45351246, y: 0.8247564, z: -0.3377919}
+    scale: 0.0019110965
+    confidence: 0.09759518
+    randomSeed: 0.115732804
+  - localPosition: {x: -0.044102, y: -0.001395, z: -0.011172}
+    localNormal: {x: -0.96959174, y: 0.23861079, z: -0.054376382}
+    scale: 0.0015520192
+    confidence: 0.09752823
+    randomSeed: 0.47120816
+  - localPosition: {x: -0.005653, y: -0.017793, z: 0.047762}
+    localNormal: {x: -0.63905483, y: -0.2357707, z: 0.7321346}
+    scale: 0.0022326342
+    confidence: 0.09740189
+    randomSeed: 0.06696618
+  - localPosition: {x: -0.022785, y: 0.017638, z: 0.025499}
+    localNormal: {x: -0.32253453, y: 0.612722, z: 0.72148687}
+    scale: 0.0021109805
+    confidence: 0.09731131
+    randomSeed: 0.79165804
+  - localPosition: {x: -0.017825, y: -0.006, z: 0.039565}
+    localNormal: {x: -0.36007202, y: 0.0061316397, z: 0.93290436}
+    scale: 0.001504696
+    confidence: 0.09725025
+    randomSeed: 0.28795603
+  - localPosition: {x: 0.003465, y: 0.021101, z: -0.015205}
+    localNormal: {x: 0.24025774, y: 0.9598597, z: -0.14472574}
+    scale: 0.001709968
+    confidence: 0.09695692
+    randomSeed: 0.12370969
+  - localPosition: {x: 0.022562, y: 0.004964, z: -0.027646}
+    localNormal: {x: 0.45190826, y: 0.7421633, z: -0.49494705}
+    scale: 0.0023429499
+    confidence: 0.09694347
+    randomSeed: 0.32517567
+  - localPosition: {x: -0.004686, y: 0.025683, z: 0.002512}
+    localNormal: {x: 0.07764426, y: 0.9822704, z: 0.17063496}
+    scale: 0.0017903586
+    confidence: 0.09664268
+    randomSeed: 0.49707073
+  - localPosition: {x: -0.011387, y: 0.026642, z: 0.010003}
+    localNormal: {x: -0.06864548, y: 0.99464506, z: -0.07725909}
+    scale: 0.0019970085
+    confidence: 0.09637841
+    randomSeed: 0.46487206
+  - localPosition: {x: -0.030144, y: 0.002109, z: -0.031249}
+    localNormal: {x: -0.7669267, y: 0.13054225, z: -0.628317}
+    scale: 0.002285476
+    confidence: 0.096372254
+    randomSeed: 0.97892916
+  - localPosition: {x: 0.042789, y: -0.00698, z: -0.012682}
+    localNormal: {x: 0.70828164, y: -0.0033054198, z: -0.7059223}
+    scale: 0.0019465726
+    confidence: 0.09619565
+    randomSeed: 0.938359
+  - localPosition: {x: -0.040355, y: -0.016016, z: 0.007557}
+    localNormal: {x: -0.9219443, y: -0.29951167, z: 0.24558377}
+    scale: 0.0019633134
+    confidence: 0.09613065
+    randomSeed: 0.03226388
+  - localPosition: {x: 0.021177, y: 0.013351, z: -0.015187}
+    localNormal: {x: 0.5706116, y: 0.76041764, z: -0.31010866}
+    scale: 0.0017947392
+    confidence: 0.095762715
+    randomSeed: 0.53427166
+  - localPosition: {x: 0.000918, y: 0.02358, z: -0.005758}
+    localNormal: {x: 0.06435061, y: 0.9256869, z: -0.3727771}
+    scale: 0.0014491564
+    confidence: 0.095706396
+    randomSeed: 0.9774989
+  - localPosition: {x: -0.038567, y: 0.015168, z: 0.005124}
+    localNormal: {x: -0.5858123, y: 0.7083938, z: 0.39370313}
+    scale: 0.0023562093
+    confidence: 0.09560056
+    randomSeed: 0.80900264
+  - localPosition: {x: -0.016347, y: -0.008292, z: -0.044045}
+    localNormal: {x: -0.45308813, y: -0.057372957, z: -0.8896176}
+    scale: 0.002281315
+    confidence: 0.09553812
+    randomSeed: 0.63430756
+  - localPosition: {x: 0.004275, y: 0.013944, z: 0.036155}
+    localNormal: {x: 0.1243599, y: 0.739391, z: 0.6616914}
+    scale: 0.002234177
+    confidence: 0.095416695
+    randomSeed: 0.050235875
+  - localPosition: {x: 0.00228, y: 0.021482, z: 0.022977}
+    localNormal: {x: 0.10077108, y: 0.87025726, z: 0.4821799}
+    scale: 0.002173335
+    confidence: 0.09529122
+    randomSeed: 0.704187
+  - localPosition: {x: 0.007577, y: 0.023487, z: 0.006737}
+    localNormal: {x: 0.36496502, y: 0.91066235, z: -0.19363546}
+    scale: 0.002196131
+    confidence: 0.095287934
+    randomSeed: 0.5104818
+  - localPosition: {x: -0.042239, y: -0.014584, z: -0.00346}
+    localNormal: {x: -0.9679892, y: -0.25062716, z: 0.013525448}
+    scale: 0.0020687706
+    confidence: 0.095238194
+    randomSeed: 0.8572335
+  - localPosition: {x: -0.021438, y: -0.007778, z: -0.040292}
+    localNormal: {x: -0.52833635, y: 0.044050597, z: -0.8478917}
+    scale: 0.002382013
+    confidence: 0.095032044
+    randomSeed: 0.8770598
+  - localPosition: {x: 0.010198, y: 0.016084, z: 0.02571}
+    localNormal: {x: 0.31496772, y: 0.85891664, z: 0.4038038}
+    scale: 0.0018895664
+    confidence: 0.094722435
+    randomSeed: 0.041418675
+  - localPosition: {x: -0.002058, y: 0.020407, z: 0.027002}
+    localNormal: {x: 0.39029416, y: 0.76883477, z: 0.50652105}
+    scale: 0.0016834438
+    confidence: 0.09441198
+    randomSeed: 0.33925167
+  - localPosition: {x: 0.000666, y: 0.013316, z: 0.034583}
+    localNormal: {x: -0.012149828, y: 0.6702306, z: 0.7420534}
+    scale: 0.0016253258
+    confidence: 0.0942695
+    randomSeed: 0.2406353
+  - localPosition: {x: -0.037036, y: -0.005246, z: -0.029864}
+    localNormal: {x: -0.69643205, y: 0.050181415, z: -0.715866}
+    scale: 0.0023713699
+    confidence: 0.094061516
+    randomSeed: 0.10876919
+  - localPosition: {x: -0.001018, y: 0.027661, z: 0.001791}
+    localNormal: {x: 0.22229299, y: 0.9682023, z: -0.11476144}
+    scale: 0.0022612112
+    confidence: 0.093981445
+    randomSeed: 0.9646597
+  - localPosition: {x: 0.035322, y: 0.0041, z: 0.003551}
+    localNormal: {x: 0.71732944, y: 0.69641006, z: -0.021249281}
+    scale: 0.0016165901
+    confidence: 0.09397436
+    randomSeed: 0.33751622
+  - localPosition: {x: 0.003678, y: 0.023672, z: 0.01098}
+    localNormal: {x: 0.4533297, y: 0.88754773, z: 0.08216568}
+    scale: 0.0021910088
+    confidence: 0.09396998
+    randomSeed: 0.22918954
+  - localPosition: {x: -0.014754, y: 0.002455, z: -0.041579}
+    localNormal: {x: -0.17355458, y: 0.30189592, z: -0.9374101}
+    scale: 0.0017012336
+    confidence: 0.09382372
+    randomSeed: 0.24385193
+  - localPosition: {x: -0.023458, y: 0.011503, z: -0.031179}
+    localNormal: {x: -0.63862604, y: 0.65813035, z: -0.39877477}
+    scale: 0.0021395371
+    confidence: 0.093460105
+    randomSeed: 0.39552706
+  - localPosition: {x: -0.023214, y: 0.015935, z: -0.026617}
+    localNormal: {x: -0.3085654, y: 0.6079744, z: -0.7315425}
+    scale: 0.0014591553
+    confidence: 0.09332994
+    randomSeed: 0.6995171
+  - localPosition: {x: -0.040856, y: -0.006959, z: 0.018283}
+    localNormal: {x: -0.96118444, y: -0.008979319, z: 0.27576056}
+    scale: 0.001647809
+    confidence: 0.09322922
+    randomSeed: 0.8537464
+  - localPosition: {x: -0.044569, y: -0.004854, z: -0.014882}
+    localNormal: {x: -0.98684454, y: -0.082868, z: -0.13881916}
+    scale: 0.0018524502
+    confidence: 0.09320669
+    randomSeed: 0.1768079
+  - localPosition: {x: -0.022327, y: 0.023064, z: 0.006647}
+    localNormal: {x: -0.18857896, y: 0.9653317, z: -0.18047933}
+    scale: 0.0016063913
+    confidence: 0.093073
+    randomSeed: 0.81855226
+  - localPosition: {x: -0.040164, y: 0.001418, z: -0.021791}
+    localNormal: {x: -0.7900296, y: 0.48183146, z: -0.37906685}
+    scale: 0.0023684395
+    confidence: 0.092611164
+    randomSeed: 0.60637015
+  - localPosition: {x: -0.031008, y: 0.018889, z: -0.011748}
+    localNormal: {x: -0.5323325, y: 0.78156644, z: -0.32523245}
+    scale: 0.0021295603
+    confidence: 0.092537165
+    randomSeed: 0.49779195
+  - localPosition: {x: 0.009424, y: -0.01179, z: 0.046429}
+    localNormal: {x: 0.011678034, y: 0.15747379, z: 0.98745406}
+    scale: 0.0023707922
+    confidence: 0.092467554
+    randomSeed: 0.041177515
+  - localPosition: {x: 0.015077, y: -0.005603, z: 0.044472}
+    localNormal: {x: 0.5421877, y: 0.18951905, z: 0.8186056}
+    scale: 0.0017761815
+    confidence: 0.09231453
+    randomSeed: 0.7562736
+  - localPosition: {x: 0.0246, y: 0.009224, z: -0.017913}
+    localNormal: {x: 0.4777672, y: 0.825001, z: -0.30184752}
+    scale: 0.0019135505
+    confidence: 0.091982625
+    randomSeed: 0.6366988
+  - localPosition: {x: 0.03266, y: 0.00006, z: 0.02719}
+    localNormal: {x: 0.6043596, y: 0.5971248, z: 0.5274385}
+    scale: 0.0021039422
+    confidence: 0.09170798
+    randomSeed: 0.6162092
+  - localPosition: {x: 0.013494, y: -0.001724, z: -0.041584}
+    localNormal: {x: 0.57140183, y: 0.60340303, z: -0.55624163}
+    scale: 0.002337736
+    confidence: 0.09167596
+    randomSeed: 0.42637402
+  - localPosition: {x: -0.029027, y: 0.011922, z: -0.030142}
+    localNormal: {x: -0.43843582, y: 0.5283012, z: -0.72709835}
+    scale: 0.0020475008
+    confidence: 0.0916556
+    randomSeed: 0.0056242947
+  - localPosition: {x: -0.04398, y: -0.016113, z: -0.017206}
+    localNormal: {x: -0.96419203, y: -0.25859195, z: -0.058855638}
+    scale: 0.0023205902
+    confidence: 0.091547936
+    randomSeed: 0.529623
+  - localPosition: {x: -0.025761, y: 0.01215, z: -0.027917}
+    localNormal: {x: -0.20608893, y: 0.79255, z: -0.5739267}
+    scale: 0.0020235728
+    confidence: 0.09154493
+    randomSeed: 0.610323
+  - localPosition: {x: -0.041134, y: 0.01295, z: 0.000802}
+    localNormal: {x: -0.9371941, y: 0.33025333, z: -0.11224988}
+    scale: 0.0015864548
+    confidence: 0.0915406
+    randomSeed: 0.023363592
+  - localPosition: {x: -0.035281, y: 0.008088, z: 0.02339}
+    localNormal: {x: -0.81434315, y: 0.41584325, z: 0.40486994}
+    scale: 0.0016108607
+    confidence: 0.09146372
+    randomSeed: 0.24910453
+  - localPosition: {x: -0.036436, y: -0.016264, z: -0.026013}
+    localNormal: {x: -0.6034524, y: -0.13817315, z: -0.78533655}
+    scale: 0.001664114
+    confidence: 0.09103824
+    randomSeed: 0.10660054
+  - localPosition: {x: -0.006516, y: 0.013864, z: -0.033918}
+    localNormal: {x: 0.09411258, y: 0.7813232, z: -0.6169902}
+    scale: 0.0020699303
+    confidence: 0.091028005
+    randomSeed: 0.38503796
+  - localPosition: {x: 0.008305, y: 0.014699, z: -0.024414}
+    localNormal: {x: 0.28401273, y: 0.93220174, z: -0.22435829}
+    scale: 0.002243963
+    confidence: 0.090659864
+    randomSeed: 0.99019563
+  - localPosition: {x: -0.001042, y: 0.002326, z: -0.043538}
+    localNormal: {x: -0.273168, y: 0.51400256, z: -0.81313014}
+    scale: 0.002219449
+    confidence: 0.09055183
+    randomSeed: 0.13341679
+  - localPosition: {x: -0.043379, y: -0.012946, z: 0.002563}
+    localNormal: {x: -0.937891, y: -0.33464336, z: -0.09151146}
+    scale: 0.0017905835
+    confidence: 0.09054492
+    randomSeed: 0.41703397
+  - localPosition: {x: -0.004525, y: 0.016629, z: 0.03344}
+    localNormal: {x: -0.0490464, y: 0.8410297, z: 0.5387611}
+    scale: 0.0017079834
+    confidence: 0.090542905
+    randomSeed: 0.62583023
+  - localPosition: {x: 0.010748, y: 0.021575, z: 0.00163}
+    localNormal: {x: 0.49864715, y: 0.8569856, z: -0.13010263}
+    scale: 0.0019584708
+    confidence: 0.09043063
+    randomSeed: 0.16915037
+  - localPosition: {x: -0.0008, y: 0.013016, z: -0.034786}
+    localNormal: {x: 0.32134756, y: 0.79910976, z: -0.5080938}
+    scale: 0.0018002966
+    confidence: 0.090287335
+    randomSeed: 0.08741606
+  - localPosition: {x: -0.020494, y: -0.021902, z: 0.017008}
+    localNormal: {x: 0.23188025, y: -0.29031327, z: 0.9284125}
+    scale: 0.0019345141
+    confidence: 0.08991701
+    randomSeed: 0.50726885
+  - localPosition: {x: -0.021619, y: -0.001987, z: 0.037898}
+    localNormal: {x: -0.2930302, y: -0.190071, z: 0.93701994}
+    scale: 0.0022480504
+    confidence: 0.08983041
+    randomSeed: 0.7701813
+  - localPosition: {x: -0.045491, y: 0.000314, z: 0.007737}
+    localNormal: {x: -0.968777, y: -0.13018806, z: 0.21100277}
+    scale: 0.0017665606
+    confidence: 0.089801185
+    randomSeed: 0.34365264
+  - localPosition: {x: 0.000958, y: -0.016657, z: 0.048877}
+    localNormal: {x: 0.054596644, y: 0.16921239, z: 0.98406625}
+    scale: 0.0016534963
+    confidence: 0.08978574
+    randomSeed: 0.3755018
+  - localPosition: {x: 0.006353, y: 0.00404, z: -0.039573}
+    localNormal: {x: 0.27062434, y: 0.48605242, z: -0.8309727}
+    scale: 0.001921742
+    confidence: 0.08967514
+    randomSeed: 0.23920861
+  - localPosition: {x: -0.041605, y: 0.00559, z: 0.01542}
+    localNormal: {x: -0.87988997, y: 0.39854315, z: 0.2587605}
+    scale: 0.0023600399
+    confidence: 0.08960062
+    randomSeed: 0.5725513
+  - localPosition: {x: 0.04005, y: -0.002011, z: -0.004539}
+    localNormal: {x: 0.5293691, y: 0.83765435, z: -0.13454957}
+    scale: 0.0018421218
+    confidence: 0.08914653
+    randomSeed: 0.16960765
+  - localPosition: {x: -0.005972, y: -0.006733, z: -0.047864}
+    localNormal: {x: -0.36182398, y: -0.015828548, z: -0.93211204}
+    scale: 0.0015996706
+    confidence: 0.08833396
+    randomSeed: 0.48933285
+  - localPosition: {x: -0.023896, y: -0.003211, z: -0.038252}
+    localNormal: {x: -0.35167396, y: 0.083216615, z: -0.93241644}
+    scale: 0.0017714798
+    confidence: 0.087992296
+    randomSeed: 0.14239825
+  - localPosition: {x: -0.041265, y: -0.011271, z: 0.012949}
+    localNormal: {x: -0.87039995, y: -0.15469879, z: 0.46741012}
+    scale: 0.002205531
+    confidence: 0.08793892
+    randomSeed: 0.24394909
+  - localPosition: {x: -0.029242, y: -0.012404, z: -0.032225}
+    localNormal: {x: -0.66437906, y: -0.1273837, z: -0.7364604}
+    scale: 0.002259472
+    confidence: 0.08793219
+    randomSeed: 0.35000184
+  - localPosition: {x: -0.044148, y: -0.003347, z: 0.011071}
+    localNormal: {x: -0.93867105, y: -0.3286226, z: -0.104421474}
+    scale: 0.0020475239
+    confidence: 0.087767
+    randomSeed: 0.12830259
+  - localPosition: {x: -0.034579, y: 0.016711, z: -0.007627}
+    localNormal: {x: -0.3625506, y: 0.927176, z: -0.094349325}
+    scale: 0.0018111995
+    confidence: 0.08755302
+    randomSeed: 0.32746485
+  - localPosition: {x: -0.036669, y: 0.001325, z: 0.024164}
+    localNormal: {x: -0.8414329, y: -0.2760908, z: 0.4645046}
+    scale: 0.0020345398
+    confidence: 0.08750501
+    randomSeed: 0.15953685
+  - localPosition: {x: -0.006643, y: 0.028458, z: 0.006651}
+    localNormal: {x: 0.084199294, y: 0.9883835, z: 0.12652487}
+    scale: 0.001508862
+    confidence: 0.086933516
+    randomSeed: 0.80597293
+  - localPosition: {x: -0.030975, y: -0.00683, z: -0.033803}
+    localNormal: {x: -0.80281436, y: 0.20656854, z: -0.5593019}
+    scale: 0.0019921502
+    confidence: 0.08643289
+    randomSeed: 0.4857642
+  - localPosition: {x: -0.031731, y: 0.004945, z: 0.02771}
+    localNormal: {x: -0.75310355, y: 0.060095467, z: 0.6551516}
+    scale: 0.0017692181
+    confidence: 0.08589199
+    randomSeed: 0.8430921
+  - localPosition: {x: -0.015401, y: -0.012801, z: 0.039709}
+    localNormal: {x: -0.63486505, y: -0.33649242, z: 0.69549924}
+    scale: 0.0016540934
+    confidence: 0.08545678
+    randomSeed: 0.5515817
+  - localPosition: {x: 0.009954, y: 0.004946, z: 0.041517}
+    localNormal: {x: 0.17626113, y: 0.59299266, z: 0.78567916}
+    scale: 0.0016500719
+    confidence: 0.08540671
+    randomSeed: 0.5578943
+  - localPosition: {x: 0.008244, y: 0.025385, z: 0.012583}
+    localNormal: {x: 0.2519028, y: 0.9668872, z: 0.04091649}
+    scale: 0.0015802776
+    confidence: 0.085002124
+    randomSeed: 0.5278575
+  - localPosition: {x: 0.017274, y: -0.01127, z: 0.046174}
+    localNormal: {x: 0.4945937, y: 0.10998458, z: 0.8621372}
+    scale: 0.001755885
+    confidence: 0.08475297
+    randomSeed: 0.50981385
+  - localPosition: {x: -0.01551, y: -0.00169, z: -0.041941}
+    localNormal: {x: -0.15703836, y: 0.14938225, z: -0.9762294}
+    scale: 0.0018020422
+    confidence: 0.08457223
+    randomSeed: 0.97618484
+  - localPosition: {x: 0.021052, y: 0.015747, z: 0.009696}
+    localNormal: {x: 0.37407187, y: 0.92717403, z: -0.020460915}
+    scale: 0.001882868
+    confidence: 0.084278345
+    randomSeed: 0.58018726
+  - localPosition: {x: -0.019528, y: 0.010602, z: 0.03477}
+    localNormal: {x: -0.37001392, y: 0.5929803, z: 0.7151671}
+    scale: 0.0014981581
+    confidence: 0.08426131
+    randomSeed: 0.38902897
+  - localPosition: {x: 0.004513, y: -0.005663, z: 0.046904}
+    localNormal: {x: 0.04155828, y: 0.30875358, z: 0.95023376}
+    scale: 0.0020818447
+    confidence: 0.08419798
+    randomSeed: 0.6062457
+  - localPosition: {x: -0.005054, y: 0.024072, z: 0.011946}
+    localNormal: {x: 0.28982127, y: 0.9544522, z: 0.07088463}
+    scale: 0.001940074
+    confidence: 0.084075935
+    randomSeed: 0.67748445
+  - localPosition: {x: 0.018379, y: 0.014318, z: -0.020348}
+    localNormal: {x: 0.6130516, y: 0.7348036, z: -0.2902265}
+    scale: 0.0023646764
+    confidence: 0.08405542
+    randomSeed: 0.30713585
+  - localPosition: {x: 0.010995, y: 0.01488, z: -0.018881}
+    localNormal: {x: 0.64702356, y: 0.56445366, z: -0.5125941}
+    scale: 0.001545264
+    confidence: 0.08382496
+    randomSeed: 0.16475762
+  - localPosition: {x: -0.025504, y: 0.018317, z: 0.020559}
+    localNormal: {x: -0.48266804, y: 0.83218414, z: 0.27294913}
+    scale: 0.0023169992
+    confidence: 0.08373595
+    randomSeed: 0.21039703
+  - localPosition: {x: 0.02661, y: 0.01265, z: 0.012716}
+    localNormal: {x: 0.6488457, y: 0.7120996, z: 0.26816675}
+    scale: 0.0021488296
+    confidence: 0.0836762
+    randomSeed: 0.21897164
+  - localPosition: {x: 0.011134, y: 0.010038, z: -0.032328}
+    localNormal: {x: 0.15930468, y: 0.5806578, z: -0.79840994}
+    scale: 0.0018430462
+    confidence: 0.08328526
+    randomSeed: 0.54962593
+  - localPosition: {x: -0.04287, y: 0.006968, z: -0.011054}
+    localNormal: {x: -0.74875844, y: 0.62618345, z: -0.21738248}
+    scale: 0.0016809299
+    confidence: 0.08308012
+    randomSeed: 0.22860768
+  - localPosition: {x: -0.01135, y: 0.019153, z: 0.028942}
+    localNormal: {x: -0.081263386, y: 0.86297864, z: 0.4986624}
+    scale: 0.0020866885
+    confidence: 0.0830771
+    randomSeed: 0.94360876
+  - localPosition: {x: -0.042426, y: 0.010986, z: 0.0058}
+    localNormal: {x: -0.8224127, y: 0.54685354, z: 0.15680742}
+    scale: 0.0018125481
+    confidence: 0.083063796
+    randomSeed: 0.5018038
+  - localPosition: {x: 0.002644, y: 0.010421, z: 0.03708}
+    localNormal: {x: 0.09002344, y: 0.57905346, z: 0.8103042}
+    scale: 0.0023255798
+    confidence: 0.08279433
+    randomSeed: 0.10265292
+  - localPosition: {x: 0.004495, y: 0.025985, z: -0.001068}
+    localNormal: {x: 0.24824812, y: 0.95240253, z: -0.17692466}
+    scale: 0.0023003551
+    confidence: 0.08258043
+    randomSeed: 0.9807129
+  - localPosition: {x: -0.026731, y: 0.016988, z: -0.020816}
+    localNormal: {x: -0.34758747, y: 0.893733, z: -0.28359172}
+    scale: 0.00196122
+    confidence: 0.08235231
+    randomSeed: 0.17300333
+  - localPosition: {x: -0.006928, y: -0.010185, z: 0.045133}
+    localNormal: {x: -0.48367336, y: 0.05867175, z: 0.87327987}
+    scale: 0.0018143988
+    confidence: 0.082138106
+    randomSeed: 0.7388099
+  - localPosition: {x: -0.018302, y: 0.009937, z: -0.035564}
+    localNormal: {x: -0.35763413, y: 0.61497176, z: -0.7027856}
+    scale: 0.0015954463
+    confidence: 0.08204002
+    randomSeed: 0.9414432
+  - localPosition: {x: -0.009336, y: 0.021384, z: -0.02422}
+    localNormal: {x: -0.16075659, y: 0.9093935, z: -0.38361552}
+    scale: 0.0014407448
+    confidence: 0.08170991
+    randomSeed: 0.44728273
+  - localPosition: {x: -0.015494, y: 0.021103, z: -0.017048}
+    localNormal: {x: -0.3438265, y: 0.9192403, z: -0.19178273}
+    scale: 0.0015474807
+    confidence: 0.08166627
+    randomSeed: 0.75011873
+  - localPosition: {x: -0.01276, y: 0.016567, z: -0.033147}
+    localNormal: {x: -0.28958857, y: 0.7435614, z: -0.6027064}
+    scale: 0.0015851712
+    confidence: 0.08162979
+    randomSeed: 0.38586575
+  - localPosition: {x: 0.018553, y: -0.004411, z: 0.041733}
+    localNormal: {x: 0.14694479, y: 0.22721602, z: 0.9626942}
+    scale: 0.0015374223
+    confidence: 0.08142731
+    randomSeed: 0.067094095
+  - localPosition: {x: 0.022347, y: 0.016573, z: 0.006061}
+    localNormal: {x: 0.5907937, y: 0.8067718, z: 0.009059312}
+    scale: 0.0018376852
+    confidence: 0.081365794
+    randomSeed: 0.8583411
+  - localPosition: {x: -0.021753, y: 0.011521, z: 0.031346}
+    localNormal: {x: -0.33932436, y: 0.55215114, z: 0.76156956}
+    scale: 0.0021894008
+    confidence: 0.08113235
+    randomSeed: 0.2758887
+  - localPosition: {x: 0.018879, y: 0.012437, z: 0.026717}
+    localNormal: {x: 0.4876907, y: 0.839856, z: 0.23832688}
+    scale: 0.0018982961
+    confidence: 0.08108986
+    randomSeed: 0.07616366
+  - localPosition: {x: -0.036211, y: 0.018934, z: 0.003775}
+    localNormal: {x: -0.5329565, y: 0.8437099, z: 0.064117245}
+    scale: 0.0019672972
+    confidence: 0.08084662
+    randomSeed: 0.2455906
+  - localPosition: {x: 0.000697, y: 0.023547, z: -0.012826}
+    localNormal: {x: 0.20064247, y: 0.9480769, z: -0.24676462}
+    scale: 0.0019791175
+    confidence: 0.08065761
+    randomSeed: 0.16647674
+  - localPosition: {x: -0.037411, y: 0.018039, z: -0.003674}
+    localNormal: {x: -0.71463364, y: 0.69949776, z: 0.0012743141}
+    scale: 0.0019347109
+    confidence: 0.08047646
+    randomSeed: 0.291845
+  - localPosition: {x: -0.025164, y: 0.003254, z: -0.036596}
+    localNormal: {x: -0.5500203, y: 0.3120322, z: -0.77467006}
+    scale: 0.0022019406
+    confidence: 0.080028765
+    randomSeed: 0.83552456
+  - localPosition: {x: -0.006222, y: 0.002021, z: 0.04282}
+    localNormal: {x: -0.04310721, y: 0.3270337, z: 0.944029}
+    scale: 0.0021926027
+    confidence: 0.079482324
+    randomSeed: 0.5635473
+  - localPosition: {x: -0.044762, y: -0.005959, z: -0.007067}
+    localNormal: {x: -0.9629746, y: -0.2695098, z: -0.0066644624}
+    scale: 0.0019281553
+    confidence: 0.0794113
+    randomSeed: 0.051488407
+  - localPosition: {x: -0.031931, y: -0.002991, z: 0.030531}
+    localNormal: {x: -0.7423907, y: -0.011979807, z: 0.66986006}
+    scale: 0.0021993723
+    confidence: 0.079315916
+    randomSeed: 0.9257506
+  - localPosition: {x: -0.045359, y: 0.002429, z: -0.004677}
+    localNormal: {x: -0.98840225, y: 0.11978616, z: -0.09333954}
+    scale: 0.0014712549
+    confidence: 0.079300895
+    randomSeed: 0.5434771
+  - localPosition: {x: 0.015419, y: 0.018828, z: -0.005666}
+    localNormal: {x: 0.4211527, y: 0.8986752, z: -0.12252874}
+    scale: 0.0020543544
+    confidence: 0.07927464
+    randomSeed: 0.44687837
+  - localPosition: {x: -0.018334, y: 0.022398, z: 0.017334}
+    localNormal: {x: -0.16532922, y: 0.9407331, z: 0.29612076}
+    scale: 0.0015033132
+    confidence: 0.078938216
+    randomSeed: 0.41941255
+  - localPosition: {x: 0.016131, y: 0.017331, z: 0.021234}
+    localNormal: {x: 0.47295427, y: 0.8701332, z: 0.13850093}
+    scale: 0.002361512
+    confidence: 0.07892804
+    randomSeed: 0.44617885
+  - localPosition: {x: -0.029645, y: 0.000026, z: 0.03351}
+    localNormal: {x: -0.3735268, y: 0.22729559, z: 0.8993411}
+    scale: 0.002145888
+    confidence: 0.07889844
+    randomSeed: 0.51607877
+  - localPosition: {x: -0.026764, y: 0.002134, z: 0.035096}
+    localNormal: {x: -0.6834735, y: 0.45130354, z: 0.57374996}
+    scale: 0.0017659302
+    confidence: 0.07879656
+    randomSeed: 0.540667
+  - localPosition: {x: -0.033048, y: 0.000192, z: 0.028024}
+    localNormal: {x: -0.64304215, y: 0.41400144, z: 0.6442822}
+    scale: 0.001578667
+    confidence: 0.078625515
+    randomSeed: 0.21901861
+  - localPosition: {x: -0.000211, y: 0.024584, z: 0.0059}
+    localNormal: {x: 0.007918991, y: 0.9934005, z: 0.11442352}
+    scale: 0.0023466693
+    confidence: 0.07810267
+    randomSeed: 0.7236212
+  - localPosition: {x: -0.032087, y: 0.020686, z: -0.005348}
+    localNormal: {x: -0.36714724, y: 0.9129121, z: -0.17831002}
+    scale: 0.0016566812
+    confidence: 0.077928945
+    randomSeed: 0.9781021
+  - localPosition: {x: -0.000079, y: 0.025512, z: 0.011898}
+    localNormal: {x: -0.027512133, y: 0.9916641, z: -0.12587821}
+    scale: 0.0023444681
+    confidence: 0.07760273
+    randomSeed: 0.92368495
+  - localPosition: {x: -0.032332, y: -0.004725, z: -0.030688}
+    localNormal: {x: -0.5574182, y: 0.23733582, z: -0.79558575}
+    scale: 0.0023910678
+    confidence: 0.07751025
+    randomSeed: 0.6617777
+  - localPosition: {x: -0.034094, y: -0.001278, z: -0.02996}
+    localNormal: {x: -0.43964532, y: 0.17056602, z: -0.8818272}
+    scale: 0.0016617229
+    confidence: 0.07748212
+    randomSeed: 0.21316805
+  - localPosition: {x: -0.039591, y: 0.008002, z: -0.01417}
+    localNormal: {x: -0.8831896, y: 0.2467029, z: -0.39889073}
+    scale: 0.0019854738
+    confidence: 0.07733054
+    randomSeed: 0.5621925
+  - localPosition: {x: -0.000432, y: 0.022921, z: 0.020235}
+    localNormal: {x: 0.22076404, y: 0.9686136, z: 0.11424025}
+    scale: 0.0022705134
+    confidence: 0.07709724
+    randomSeed: 0.6857304
+  - localPosition: {x: -0.015589, y: 0.02495, z: 0.013912}
+    localNormal: {x: -0.25732976, y: 0.9609211, z: 0.10203943}
+    scale: 0.0020985834
+    confidence: 0.076774634
+    randomSeed: 0.040905956
+  - localPosition: {x: -0.014605, y: 0.021612, z: 0.022482}
+    localNormal: {x: -0.2833379, y: 0.7176063, z: 0.6362082}
+    scale: 0.0018347265
+    confidence: 0.07673617
+    randomSeed: 0.6280171
+  - localPosition: {x: -0.035717, y: 0.013581, z: 0.0202}
+    localNormal: {x: -0.5978585, y: 0.5760651, z: 0.55741745}
+    scale: 0.002336358
+    confidence: 0.07570431
+    randomSeed: 0.5162305
+  - localPosition: {x: -0.043187, y: 0.00083, z: -0.014579}
+    localNormal: {x: -0.89219964, y: 0.42597425, z: -0.15008597}
+    scale: 0.0015950568
+    confidence: 0.07568808
+    randomSeed: 0.4586404
+  - localPosition: {x: -0.041215, y: -0.002451, z: -0.022151}
+    localNormal: {x: -0.8755572, y: 0.12198077, z: -0.46746153}
+    scale: 0.0015258701
+    confidence: 0.07535352
+    randomSeed: 0.06507195
+  - localPosition: {x: -0.044787, y: 0.005498, z: 0.005744}
+    localNormal: {x: -0.96412885, y: 0.0514752, z: -0.26039535}
+    scale: 0.0022061374
+    confidence: 0.07521442
+    randomSeed: 0.48840576
+  - localPosition: {x: -0.009643, y: -0.011201, z: -0.047765}
+    localNormal: {x: -0.37920395, y: 0.19662218, z: -0.9041815}
+    scale: 0.0017970286
+    confidence: 0.0748944
+    randomSeed: 0.72837025
+  - localPosition: {x: 0.017124, y: 0.019507, z: -0.001636}
+    localNormal: {x: 0.4215567, y: 0.90281516, z: -0.08493946}
+    scale: 0.0020752812
+    confidence: 0.07457137
+    randomSeed: 0.22785667
+  - localPosition: {x: 0.011509, y: -0.0036, z: 0.045366}
+    localNormal: {x: 0.22566608, y: 0.2758328, z: 0.93433994}
+    scale: 0.0016175718
+    confidence: 0.074457765
+    randomSeed: 0.67377466
+  - localPosition: {x: -0.044799, y: 0.006184, z: 0.012055}
+    localNormal: {x: -0.8699574, y: 0.32160744, z: 0.37382197}
+    scale: 0.002159614
+    confidence: 0.07445099
+    randomSeed: 0.8175181
+  - localPosition: {x: -0.038674, y: -0.00544, z: 0.023635}
+    localNormal: {x: -0.7446177, y: 0.051559754, z: 0.6654969}
+    scale: 0.0019698865
+    confidence: 0.074255124
+    randomSeed: 0.7535305
+  - localPosition: {x: 0.008897, y: 0.019608, z: 0.023686}
+    localNormal: {x: 0.3400233, y: 0.8490127, z: 0.4044275}
+    scale: 0.0015313474
+    confidence: 0.0741395
+    randomSeed: 0.050731666
+  - localPosition: {x: -0.045358, y: -0.004349, z: 0.000061}
+    localNormal: {x: -0.9629287, y: 0.1869744, z: -0.19444513}
+    scale: 0.0017749681
+    confidence: 0.0741274
+    randomSeed: 0.3111166
+  - localPosition: {x: -0.011617, y: 0.025711, z: -0.000139}
+    localNormal: {x: 0.17043425, y: 0.98200625, z: -0.081337884}
+    scale: 0.0018171633
+    confidence: 0.07392508
+    randomSeed: 0.051559813
+  - localPosition: {x: -0.010887, y: 0.014191, z: 0.034717}
+    localNormal: {x: -0.2415634, y: 0.8009412, z: 0.54785055}
+    scale: 0.002125569
+    confidence: 0.073906034
+    randomSeed: 0.8854282
+  - localPosition: {x: 0.031722, y: 0.008266, z: -0.000155}
+    localNormal: {x: 0.77974176, y: 0.6187034, z: 0.0959627}
+    scale: 0.0020453567
+    confidence: 0.07382552
+    randomSeed: 0.8238987
+  - localPosition: {x: -0.028365, y: 0.02232, z: 0.003054}
+    localNormal: {x: -0.50267446, y: 0.8592451, z: 0.09495346}
+    scale: 0.0023270287
+    confidence: 0.07376194
+    randomSeed: 0.51784474
+  - localPosition: {x: 0.045902, y: -0.003886, z: -0.000265}
+    localNormal: {x: 0.38198563, y: 0.9241018, z: -0.0110838255}
+    scale: 0.0020371836
+    confidence: 0.073439024
+    randomSeed: 0.48126024
+  - localPosition: {x: 0.030087, y: 0.009509, z: -0.005875}
+    localNormal: {x: 0.55766886, y: 0.7845211, z: -0.2711681}
+    scale: 0.0016293237
+    confidence: 0.07325962
+    randomSeed: 0.77591
+  - localPosition: {x: -0.045387, y: 0.005038, z: -0.008646}
+    localNormal: {x: -0.96121025, y: 0.25844496, z: -0.096338555}
+    scale: 0.0017709354
+    confidence: 0.07314276
+    randomSeed: 0.92981887
+  - localPosition: {x: 0.028997, y: -0.0052, z: 0.038492}
+    localNormal: {x: 0.75422627, y: 0.27067757, z: 0.5982278}
+    scale: 0.00227014
+    confidence: 0.07310623
+    randomSeed: 0.9691484
+  - localPosition: {x: -0.018247, y: 0.024754, z: -0.006446}
+    localNormal: {x: -0.30085382, y: 0.946741, z: -0.11475413}
+    scale: 0.0023139718
+    confidence: 0.07298695
+    randomSeed: 0.95620894
+  - localPosition: {x: 0.02474, y: 0.010091, z: 0.024678}
+    localNormal: {x: 0.53759307, y: 0.76818603, z: 0.3476836}
+    scale: 0.0021518483
+    confidence: 0.072927356
+    randomSeed: 0.65239185
+  - localPosition: {x: -0.024505, y: 0.023699, z: -0.005406}
+    localNormal: {x: -0.42709345, y: 0.90414774, z: 0.01039406}
+    scale: 0.001959399
+    confidence: 0.07275855
+    randomSeed: 0.8118535
+  - localPosition: {x: -0.019907, y: -0.017375, z: -0.039434}
+    localNormal: {x: -0.6276601, y: -0.32866323, z: -0.7057077}
+    scale: 0.0022785137
+    confidence: 0.07273119
+    randomSeed: 0.005767465
+  - localPosition: {x: -0.005365, y: 0.026576, z: -0.006806}
+    localNormal: {x: 0.1435787, y: 0.97671854, z: -0.15939307}
+    scale: 0.0020294914
+    confidence: 0.07253667
+    randomSeed: 0.17178811
+  - localPosition: {x: 0.009727, y: 0.009983, z: 0.038321}
+    localNormal: {x: 0.32188022, y: 0.6412613, z: 0.69654655}
+    scale: 0.002345076
+    confidence: 0.07253433
+    randomSeed: 0.5329588
+  - localPosition: {x: -0.021378, y: 0.006299, z: 0.035264}
+    localNormal: {x: -0.3370412, y: 0.26199383, z: 0.9043022}
+    scale: 0.0014429117
+    confidence: 0.07250128
+    randomSeed: 0.8196713
+  - localPosition: {x: -0.046158, y: -0.001478, z: -0.00681}
+    localNormal: {x: -0.9709437, y: 0.0629443, z: -0.23088165}
+    scale: 0.0022006957
+    confidence: 0.07229963
+    randomSeed: 0.41681033
+  - localPosition: {x: 0.006914, y: 0.021924, z: -0.012025}
+    localNormal: {x: 0.4703675, y: 0.85602576, z: -0.21441613}
+    scale: 0.001991654
+    confidence: 0.072222665
+    randomSeed: 0.102845564
+  - localPosition: {x: -0.013138, y: 0.007897, z: -0.039214}
+    localNormal: {x: -0.14638779, y: 0.5399123, z: -0.828894}
+    scale: 0.0023104362
+    confidence: 0.07211545
+    randomSeed: 0.25368825
+  - localPosition: {x: 0.00054, y: 0.001734, z: 0.043854}
+    localNormal: {x: -0.0048150024, y: 0.40379283, z: 0.9148378}
+    scale: 0.0021222713
+    confidence: 0.07193461
+    randomSeed: 0.029821876
+  - localPosition: {x: -0.003726, y: -0.006726, z: 0.045064}
+    localNormal: {x: 0.003019606, y: 0.39862764, z: 0.9171079}
+    scale: 0.0019236737
+    confidence: 0.07144213
+    randomSeed: 0.13546528
+  - localPosition: {x: -0.016792, y: -0.023256, z: 0.017131}
+    localNormal: {x: 0.14658386, y: -0.3464704, z: 0.92653733}
+    scale: 0.0015198486
+    confidence: 0.07137256
+    randomSeed: 0.91244876
+  - localPosition: {x: -0.036628, y: 0.016415, z: -0.011729}
+    localNormal: {x: -0.64273703, y: 0.7424658, z: -0.188769}
+    scale: 0.0022682901
+    confidence: 0.070552684
+    randomSeed: 0.70037144
+  - localPosition: {x: 0.021204, y: 0.00239, z: -0.032596}
+    localNormal: {x: 0.7327267, y: 0.37109527, z: -0.5704384}
+    scale: 0.0019207433
+    confidence: 0.07019029
+    randomSeed: 0.051662214
+  - localPosition: {x: 0.017288, y: 0.000629, z: 0.040795}
+    localNormal: {x: 0.3920569, y: 0.737066, z: 0.55047715}
+    scale: 0.0020691245
+    confidence: 0.070171915
+    randomSeed: 0.75774693
+  - localPosition: {x: -0.037019, y: 0.006694, z: -0.024759}
+    localNormal: {x: -0.81562334, y: 0.43970472, z: -0.3760563}
+    scale: 0.0015349331
+    confidence: 0.06952761
+    randomSeed: 0.07525075
+  - localPosition: {x: 0.017604, y: 0.002361, z: -0.03575}
+    localNormal: {x: 0.37234578, y: 0.57904184, z: -0.7253063}
+    scale: 0.0015016834
+    confidence: 0.0693105
+    randomSeed: 0.8636652
+  - localPosition: {x: 0.040695, y: -0.005776, z: 0.016965}
+    localNormal: {x: 0.929882, y: -0.20288478, z: 0.3068506}
+    scale: 0.0014491657
+    confidence: 0.069227114
+    randomSeed: 0.2668971
+  - localPosition: {x: -0.023406, y: 0.021528, z: 0.019066}
+    localNormal: {x: -0.5780627, y: 0.7729479, z: 0.26152447}
+    scale: 0.0019299916
+    confidence: 0.069149934
+    randomSeed: 0.5667065
+  - localPosition: {x: 0.020824, y: 0.01638, z: 0.020061}
+    localNormal: {x: 0.5105909, y: 0.85761285, z: 0.061620396}
+    scale: 0.0020850473
+    confidence: 0.06892246
+    randomSeed: 0.72994155
+  - localPosition: {x: 0.033123, y: -0.002825, z: 0.031017}
+    localNormal: {x: 0.6289303, y: 0.51300675, z: 0.58418393}
+    scale: 0.0017391618
+    confidence: 0.06886141
+    randomSeed: 0.048725612
+  - localPosition: {x: 0.03667, y: 0.004606, z: 0.011958}
+    localNormal: {x: 0.77038115, y: 0.63367325, z: 0.070505835}
+    scale: 0.0014863728
+    confidence: 0.06860218
+    randomSeed: 0.022258999
+  - localPosition: {x: 0.007573, y: 0.01162, z: -0.032826}
+    localNormal: {x: 0.49336818, y: 0.5630438, z: -0.66300046}
+    scale: 0.0016546834
+    confidence: 0.06841796
+    randomSeed: 0.41290265
+  - localPosition: {x: 0.035825, y: 0.005462, z: 0.007536}
+    localNormal: {x: 0.5866371, y: 0.809714, z: 0.014837285}
+    scale: 0.0020710516
+    confidence: 0.067919426
+    randomSeed: 0.31753662
+  - localPosition: {x: 0.037907, y: 0.003547, z: -0.003845}
+    localNormal: {x: 0.7513627, y: 0.64559287, z: 0.13661616}
+    scale: 0.001609187
+    confidence: 0.06761078
+    randomSeed: 0.39162534
+  - localPosition: {x: 0.011424, y: 0.0159, z: 0.029812}
+    localNormal: {x: 0.49752918, y: 0.7833062, z: 0.37268767}
+    scale: 0.0017641627
+    confidence: 0.06623363
+    randomSeed: 0.45124644
+  - localPosition: {x: 0.029506, y: 0.001516, z: 0.031827}
+    localNormal: {x: 0.5440057, y: 0.5302354, z: 0.650314}
+    scale: 0.001991746
+    confidence: 0.0659822
+    randomSeed: 0.28668526
+  - localPosition: {x: -0.001499, y: 0.010623, z: 0.040191}
+    localNormal: {x: 0.20326525, y: 0.5030708, z: 0.8400018}
+    scale: 0.0017509607
+    confidence: 0.065095715
+    randomSeed: 0.68721646
+  - localPosition: {x: 0.020963, y: 0.015331, z: -0.00759}
+    localNormal: {x: 0.5803813, y: 0.80956143, z: -0.08813607}
+    scale: 0.0018319577
+    confidence: 0.06496726
+    randomSeed: 0.80932534
+  - localPosition: {x: -0.040984, y: 0.012502, z: -0.01463}
+    localNormal: {x: -0.83793837, y: 0.4951616, z: -0.22950882}
+    scale: 0.002200438
+    confidence: 0.064816795
+    randomSeed: 0.8620852
+  - localPosition: {x: -0.020499, y: 0.005319, z: -0.038841}
+    localNormal: {x: -0.36009517, y: 0.439153, z: -0.8230894}
+    scale: 0.0014804981
+    confidence: 0.06463851
+    randomSeed: 0.5445599
+  - localPosition: {x: -0.042842, y: -0.002503, z: -0.018379}
+    localNormal: {x: -0.8840967, y: 0.08837929, z: -0.4588706}
+    scale: 0.0018530821
+    confidence: 0.0646065
+    randomSeed: 0.5074499
+  - localPosition: {x: -0.039917, y: 0.001928, z: 0.021065}
+    localNormal: {x: -0.7997724, y: 0.32640117, z: 0.50381184}
+    scale: 0.0016195659
+    confidence: 0.064590886
+    randomSeed: 0.9282497
+  - localPosition: {x: 0.016771, y: 0.011896, z: 0.031854}
+    localNormal: {x: 0.35211053, y: 0.6867206, z: 0.6359505}
+    scale: 0.0016809724
+    confidence: 0.0645041
+    randomSeed: 0.16194548
+  - localPosition: {x: -0.030381, y: 0.018744, z: -0.016898}
+    localNormal: {x: -0.38710538, y: 0.88573945, z: -0.25615448}
+    scale: 0.0019112872
+    confidence: 0.06444673
+    randomSeed: 0.81330156
+  - localPosition: {x: -0.003518, y: 0.026735, z: 0.01506}
+    localNormal: {x: 0.26334777, y: 0.9635499, z: -0.0471117}
+    scale: 0.0015510116
+    confidence: 0.063532844
+    randomSeed: 0.10645522
+  - localPosition: {x: -0.026739, y: 0.017715, z: -0.024624}
+    localNormal: {x: -0.4641394, y: 0.7493587, z: -0.47226706}
+    scale: 0.001734529
+    confidence: 0.06308808
+    randomSeed: 0.11900951
+  - localPosition: {x: -0.029849, y: 0.01984, z: 0.017466}
+    localNormal: {x: -0.53013545, y: 0.7170067, z: 0.45261222}
+    scale: 0.0017356332
+    confidence: 0.06301185
+    randomSeed: 0.47462076
+  - localPosition: {x: -0.035901, y: 0.016303, z: 0.014524}
+    localNormal: {x: -0.5612291, y: 0.73966914, z: 0.37136427}
+    scale: 0.0017077678
+    confidence: 0.062597595
+    randomSeed: 0.079049475
+  - localPosition: {x: -0.02944, y: 0.006178, z: -0.03232}
+    localNormal: {x: -0.603361, y: 0.4680471, z: -0.6456682}
+    scale: 0.0018770498
+    confidence: 0.062429443
+    randomSeed: 0.17649664
+  - localPosition: {x: 0.045886, y: -0.0054, z: 0.008599}
+    localNormal: {x: 0.77879155, y: -0.008366177, z: 0.62722707}
+    scale: 0.0018049683
+    confidence: 0.062225644
+    randomSeed: 0.51440376
+  - localPosition: {x: -0.018413, y: 0.007487, z: 0.037806}
+    localNormal: {x: -0.45955232, y: 0.30348438, z: 0.8346909}
+    scale: 0.0015911864
+    confidence: 0.062115308
+    randomSeed: 0.5563789
+  - localPosition: {x: -0.006642, y: 0.023553, z: 0.025321}
+    localNormal: {x: -0.10947619, y: 0.93891567, z: 0.32627028}
+    scale: 0.0014902237
+    confidence: 0.061635714
+    randomSeed: 0.83093596
+  - localPosition: {x: 0.007796, y: 0.020884, z: -0.015802}
+    localNormal: {x: 0.5014091, y: 0.84043705, z: -0.2055591}
+    scale: 0.002313962
+    confidence: 0.061401304
+    randomSeed: 0.68008393
+  - localPosition: {x: -0.008473, y: -0.014163, z: 0.045498}
+    localNormal: {x: -0.68207103, y: 0.16921407, z: 0.7114392}
+    scale: 0.0015597945
+    confidence: 0.060126003
+    randomSeed: 0.85110843

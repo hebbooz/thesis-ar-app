@@ -1,0 +1,13 @@
+# Blender 5.1.1 MTL File: 'None'
+# www.blender.org
+
+newmtl default
+Ns 39.999996
+Ka 0.100000 0.100000 0.100000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd usnm_73-100k-2048-diffuse.jpg
+map_Bump -bm 1.000000 usnm_73-100k-2048-normals.jpg
