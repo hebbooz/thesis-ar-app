@@ -10,11 +10,21 @@ remains. For the original vision see `CLAUDE.md`; for the phase-by-phase plan se
 
 ## Snapshot
 
-**The full loop now works on device (2026-07-14):** the iPad tracks the physical
+> **⚠️ SCOPE CHANGE 2026-07-27 — read `docs/CONTROL_INTEGRATION.md`.**
+> This app is now a **passive subscriber** to the installation's orchestration
+> server. The server owns the healthy→bleached arc; **proximity drives only the
+> reveal and the magnification**. The proximity→bleach logic described below (and
+> in `BUILD_PLAN.md` Phase 6, `USER_STORIES.md` V3) is **superseded** and is
+> removed during integration. Remaining work is therefore **not** only refinement —
+> see `CONTROL_INTEGRATION.md` §11 for the order of work.
+
+**The full loop works on device (2026-07-14):** the iPad tracks the physical
 3D print via a Vuforia Model Target, and leaning in reveals the fluorescent coral,
-then bleaches it — proximity IS the zoom. The remaining work is **refinement**:
-tighter *spatial registration* of the glow onto the print (Phase 5) and *tuning the
-zoom/reveal beats* against the real object (Phase 7), plus the plinth mount, an
+then bleaches it — proximity IS the zoom. *(The bleach half of that sentence is what
+changed on 2026-07-27; the tracking, the reveal and the magnification all stand.)*
+The remaining work **on the rendering side** is **refinement**: tighter *spatial
+registration* of the glow onto the print (Phase 5) and *tuning the zoom/reveal
+beats* against the real object (Phase 7), plus the plinth mount, an
 endurance/thermal soak, and the thesis write-up.
 
 ---
@@ -219,7 +229,12 @@ look-dev material; the raycast → nearest-point → origin fallback chain is ro
 - [x] **3D-print the coral at life-size (10 cm)** — DONE (printed 2026-07).
 - [ ] Mount on the plinth.
 
-### Phase 7 — Tune on device ⭐ NOW ACTIVE
+### Phase 7 — Tune on device
+> **Superseded in part, 2026-07-27** (no longer the active phase — integration is;
+> see the banner at the top). The **magnification** work below stands. The
+> **colour/`_Stress` arc** does not: bleaching is the server's now. Kept as the
+> record of the 2026-07-14 device feedback and why magnification exists.
+
 **Reveal mechanic redesigned (2026-07-14) after device feedback** — `ProximityRevealController`
 + `ProximityTestRig` rewritten:
 - **No reveal fade** — the coral shows at full fluorescence whenever tracked (loupe retired;

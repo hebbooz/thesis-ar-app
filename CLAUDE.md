@@ -14,8 +14,14 @@
 > §5 below) are **shelved** (kept for a possible hybrid), and **§5–6 below describe
 > the original plan and are partially superseded.** The coral is **already
 > 3D-printed** at life-size. **Engine: Unity 6000.5.3f1.**
-> **NEXT: Phase 4 — the loupe reveal** (proximity reveals the glow, leaning closer
-> bleaches it). `docs/PROGRESS.md` is the source of truth for status + roadmap.
+> **NEXT: installation integration — read `docs/CONTROL_INTEGRATION.md` FIRST.**
+> This app is now a **passive subscriber** to the orchestration server (§9). The
+> server owns the healthy→bleached arc; **proximity drives only the reveal and the
+> magnification.** Wherever an older document says proximity bleaches the coral —
+> §1 and §6 below, `docs/PROGRESS.md`, `docs/BUILD_PLAN.md` Phase 6,
+> `docs/USER_STORIES.md` V3 — `docs/CONTROL_INTEGRATION.md` supersedes it.
+> `docs/PROGRESS.md` remains the source of truth for **build status**, but not for
+> what drives appearance.
 >
 > **⚠️ Before instructing ANY Unity setup, read PROGRESS.md's _"Current concrete
 > state"_ section.** The working scene, the coral mesh, the **`CoralTissue`
@@ -34,12 +40,15 @@ The physical setup:
 - A viewer holds an **iPad** up to it.
 - As they **lean the iPad closer**, the app reveals tiny glowing **polyps**
   (the living animals that build coral) covering the surface.
-- Lean closer still, and the polyps **get sick and bleach to white** — a
-  healthy-to-dying narrative driven by proximity.
+- Whether those polyps appear **alive, fluorescing, or bleached white** is set by
+  the wider installation (§9) — not by the phone. A visitor at the water bath
+  presses a button, the water warms, and every screen in the room changes at once.
 
 The phone acts like a **magnifying glass into a hidden, dying world.**
 **Proximity IS the zoom** — distance from coral drives how deep into the
-micro-scale content the viewer travels.
+micro-scale content the viewer travels. It is *only* the zoom: proximity changes
+how much you see, never the condition of what you are seeing. The healthy→dying
+arc belongs to the orchestration server (§9, `docs/CONTROL_INTEGRATION.md` §3).
 
 This is a **design study**, so **honest representation matters**: it's an
 explicit *stylised impression*, not a fake photograph of science. Colours,
@@ -135,11 +144,12 @@ See `docs/FILE_DOCS.md` for per-file detail.
 - `PolypScatterMap.cs` — the saved list format (handoff between stage 1 and 2)
 - `PolypPool.cs` — runtime placement (stage 2)
 - `FluorescentPolyp.shader` — appearance + bleach arc (stage 3)
-- `ProximityRevealController.cs` — proximity → reveal + bleach (stage 4).
-  Reads iPad-to-coral distance, smooths it, drives the loupe
-  (`PolypPool.SetLoupe`), and maps proximity onto two arcs: how much is revealed,
-  and how far into the bleaching arc `_Stress` has travelled. This is what makes
-  the "magnifying glass" work end-to-end.
+- `ProximityRevealController.cs` — proximity → reveal + magnification (stage 4).
+  Reads iPad-to-coral distance, smooths it, and drives the loupe
+  (`PolypPool.SetLoupe`) plus the magnification arc. This is what makes the
+  "magnifying glass" work. **Its second arc — proximity → `_Stress` → bleaching —
+  is superseded** and is removed during installation integration: `_Stress` now
+  comes off the broadcast (`docs/CONTROL_INTEGRATION.md` §3.1 and §4).
 
 **Not yet built:**
 - All core code stages are built. Remaining work is assets (below).

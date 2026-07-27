@@ -111,19 +111,27 @@ centres under the camera's aim rather than the anchor origin.
 
 ---
 
-## Phase 6 — Wire proximity and tune the beats
+## Phase 6 — Wire proximity (reveal + magnification only)
+
+> **Superseded in part, 2026-07-27.** Proximity no longer drives bleaching — the
+> orchestration server does. The bleach thresholds and curves below come **out**;
+> see `docs/CONTROL_INTEGRATION.md` §4 for exactly what is deleted and what is
+> kept, and §11 for where this phase now sits in the order of work.
 
 - [ ] Add `ProximityRevealController`; assign `pool`, leave `cam` empty
       (uses `Camera.main`), assign `coralCollider` from Phase 5.
-- [ ] Tune the four distance thresholds **on device** against the physical print
-      (⚠️#4 — tracking is at its limit this close):
-      `bleachFull < revealFull < bleachStart < revealStart` (the `OnValidate`
-      guard warns if you cross them).
-- [ ] Tune `distanceSmoothTime` and the reveal/bleach curves so leaning in feels
-      like a smooth magnifying-glass zoom, not a pop.
+- [ ] Tune the **reveal and magnification** distance thresholds **on device**
+      against the physical print (⚠️#4 — tracking is at its limit this close):
+      `magnifyFull < revealFull < magnifyStart < revealStart` (the `OnValidate`
+      guard warns if you cross them). ~~`bleachFull` / `bleachStart`~~ — removed.
+- [ ] Tune `distanceSmoothTime` and the reveal/magnification curves so leaning in
+      feels like a smooth magnifying-glass zoom, not a pop.
 
-**Done when:** leaning the iPad in reveals healthy polyps, then bleaches them as
-you get closer — smoothly, end-to-end, on the real object.
+**Done when:** leaning the iPad in reveals the polyps and magnifies them smoothly,
+end-to-end, on the real object — **and their condition does not change as you
+move.** Condition comes off the broadcast; verify with
+`tools/drive_projection.py --host <ipad-ip> --port 9001 --state 2` holding a state
+still while you move the device through the whole distance range.
 
 ---
 

@@ -229,6 +229,17 @@ build blows up on variants again.
 **Type:** `MonoBehaviour`. Runs on device, every frame. This is the piece that
 makes the "magnifying glass" work end-to-end.
 
+> **⚠️ TWO WARNINGS ON THIS SECTION.**
+> **1. Superseded (2026-07-27).** Proximity no longer drives bleaching — the
+> orchestration server does. The "bleach arc" below and its `_Stress` writes are
+> removed during installation integration; see `docs/CONTROL_INTEGRATION.md` §4 for
+> exactly what goes and what stays.
+> **2. Stale field names.** The parameters below predate the 2026-07-14 redesign
+> and **do not match the current source.** `ProximityRevealController.cs` today has
+> `naturalDistance` / `peakDistance` / `bleachFullDistance` / `resetDistance` /
+> `fluorPoint` / `magnify*` — not `revealStartDistance` / `loupeRadius*`. Read the
+> source, not this table, until it is rewritten after the integration lands.
+
 **Purpose:** Convert iPad-to-coral distance into the reveal + bleach behaviour by
 driving the coral **`FluorescentTissue` material** — `_LoupeCenter` / `_LoupeRadius`
 / `_Stress`. (Retargeted in the Phase 4 pivot; it used to drive the shelved

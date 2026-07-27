@@ -33,13 +33,17 @@ close, **so that** I discover the living animals that build it.
 - AC: Polyps glow from within (fluorescence), not like a lit plastic surface.
 
 ### V3 — The bleaching narrative
-**As a** visitor, **I want** the polyps to sicken and bleach white when I get
-very close, **so that** I feel the healthy-to-dying story of a warming reef.
-- AC: Polyps first appear **healthy**; bleaching only begins once I'm nearer than
-  the reveal threshold, so I see life before I see loss (P6 ordering).
-- AC: The arc reads healthy cyan-green → colourful surge → drained to white,
-  driven only by how close I am (Shader `_Stress`).
-- AC: Backing away lets them recover, so the change is legibly tied to my proximity.
+**As a** visitor, **I want** the polyps to sicken and bleach white **as the reef
+warms**, **so that** I feel the healthy-to-dying story of a warming reef.
+- AC: The coral's condition follows the **installation state**, never my distance
+  from it — two visitors standing at different distances see the same condition
+  at the same moment (`docs/CONTROL_INTEGRATION.md` §3).
+- AC: The arc reads healthy → colourful surge → drained to white, driven by
+  `/coral/state` + `/coral/intensity` (Shader `_Stress`).
+- AC: Backing away does **not** heal it. Bleaching latches on the server and heals
+  only on the server's schedule — the cool button is not an undo.
+- AC: The magnifier's polyps match: alive when the reef is alive, fluorescent when
+  it fluoresces, still when it is bleached (§3.2).
 
 ### V4 — It tracks the real object
 **As a** visitor, **I want** the polyps to stay locked to the physical coral as I
@@ -106,9 +110,13 @@ healthy→bleached look, **so that** placement and appearance never fall out of 
 - AC: No second, separate control has to be kept in step by hand.
 
 ### D4 — Tunable proximity beats
-**As a** developer, **I want** to tune where reveal and bleach trigger without
-editing code, **so that** I can dial the experience on-device against the print.
-- AC: Reveal/bleach distances, curves, and smoothing are inspector fields (P6).
+**As a** developer, **I want** to tune where the reveal and magnification trigger
+without editing code, **so that** I can dial the experience on-device against the
+print.
+- AC: Reveal/magnification distances, curves, and smoothing are inspector fields (P6).
+- AC: Appearance timings (`crossfade_s`, `fluor_point`) are **config-file** fields,
+  not inspector fields — they must be changeable on an exhibition device without a
+  rebuild (`docs/CONTROL_INTEGRATION.md` §5).
 - AC: Misconfigured thresholds warn me (`OnValidate`) instead of failing silently.
 - AC: Editor gizmos show where each beat triggers relative to the camera.
 
