@@ -120,10 +120,24 @@ there is exactly the failure above. The three enum members are `Random`,
 
 ---
 
-## 3. The mapping — server `(state, intensity)` → this app's `_Stress`
+## 3. The mapping — server `(state, intensity)` → what the app shows
 
-This is the actual design work, and it lands cleanly because
-`FluorescentTissue.shader` already exposes **one dial**:
+The app renders **two layers**, and *both* are driven by the broadcast:
+
+| Layer | What it is | Driven by |
+|---|---|---|
+| **Surface tissue** | Fluorescent living tissue on the coral mesh (`FluorescentTissue.shader`) | `state` + `intensity` → `_Stress` (§3.1) |
+| **Magnifier** | Polyp footage revealed inside the loupe as the viewer leans in | `state` + `intensity` → which footage, at what weight (§3.2) |
+
+**Proximity controls neither layer's appearance.** It controls only *how much of the
+magnifier is revealed* — the mask and the magnification. What the revealed polyps
+are *doing* — alive, fluorescing, dead — comes off the wire, exactly like everything
+else in the room. A visitor leaning closer sees more; a visitor pressing the warm
+button changes what there is to see.
+
+### 3.1 Surface tissue → `_Stress`
+
+This lands cleanly because `FluorescentTissue.shader` already exposes **one dial**:
 
 ```
 _Stress  0 ──────────── _FluorPoint ──────────── 1
@@ -204,6 +218,104 @@ Tuning decision you own: this makes the entire 45 s heal a non-glowing dull gold
 That reads as "healing, not glowing" and is probably right, but check it on device —
 the alternative is easing emission back in over the last ~25 % of the ramp.
 
+### 3.2 Magnifier → polyp footage
+
+**Confirmed design (2026-07-27):** the magnifier shows the polyps **alive when the
+reef is alive, fluorescent when it is fluorescent, and dead when it is dead.** It
+follows the installation state; it does not have a life of its own.
+
+The footage has not arrived yet. **Build the whole path now against a placeholder
+source** (§3.3) so that dropping the real clips in is a config edit, not an
+integration.
+
+Same rule as everywhere else — *state selects, intensity interpolates*:
+
+| State | Magnifier shows |
+|---|---|
+| 0 Natural | `alive` — polyps extended, moving |
+| 1 Fluorescent | `alive` → `fluorescent` cross-faded by `intensity` |
+| 2 Bleached | `dead` — stillness. **The key emotional beat.** |
+| 3 Recovery | `dead` → `alive` cross-faded by `intensity`, **never back through `fluorescent`** |
+
+Three clips, not four. State 3 healing straight from `dead` to `alive` mirrors the
+projection player exactly: fluorescence is a *stress response*, so the way out is
+not the way in. The weights collapse to one expression:
+
+```csharp
+// intensity is pinned at 1.0 in state 2 and ramps 1.0 → 0.0 across state 3,
+// so states 2 and 3 are the same blend — no special case for the latch.
+(float wAlive, float wFluoro, float wDead) = state switch
+{
+    0 or 1 => (1f - intensity, intensity, 0f),
+    _      => (1f - intensity, 0f, intensity),
+};
+```
+
+Reuse the slew from §3.1 (`Mathf.MoveTowards` at `1/crossfadeSeconds`) on the
+weights, and take the same **snap-don't-slew** exception on the first broadcast
+after launch.
+
+**The playhead invariant — copy this, it is hard-won:**
+
+> **Playheads only ever advance. A clip is seeked only while its weight is 0.**
+
+`intensity` drives **opacity, never a playhead**. Scrubbing a clip to
+`intensity × duration` would run the polyps *backwards* when the reef cools before
+the latch — instantly legible as an error in a way no dissolve ever is. All three
+clips loop forever, untouched; only their weights move. See
+`projection/README.md` in the control repo for the full argument.
+
+**⚠️ Do not copy the projection player's compositor.** `ProjectionPlayer.cs` blends
+in `OnRenderImage`, which **silently never fires under URP** — it is Built-In RP
+precisely for that reason, and this project is URP. Blend in the **shader** instead:
+pass both `RenderTexture`s plus the weight into the loupe material and `lerp` there.
+That is the better fit anyway — the magnifier is a masked reveal on a tracked
+surface, not a fullscreen effect. Copy the *weight logic* from `ProjectionPlayer.cs`
+(`ChooseTargets` / `EaseWeights` / the pending-fire seek guard); write the
+composite yourself.
+
+**iPad video budget.** Prepare all three `VideoPlayer`s at launch and leave them
+decoding — a `Prepare()` mid-transition stalls for hundreds of milliseconds and the
+blend visibly hitches. Three simultaneous decodes is the cost of never stalling; if
+thermals or frame rate suffer during the endurance soak, drop to two players (A/B)
+and swap the idle one while its weight is 0, which the invariant above already makes
+safe. The footage lives inside a loupe mask, not fullscreen, so **encode it small** —
+HEVC, and no larger than the on-screen mask ever gets. Blend in linear space (the
+project is already Linear + HDR).
+
+### 3.3 The placeholder seam — build now, footage later
+
+Mirror the control repo's `temperature.py` idiom: one interface, two
+implementations chosen by config, with everything above the seam identical.
+
+```csharp
+interface IMagnifierSource { Texture Alive { get; } Texture Fluorescent { get; } Texture Dead { get; } }
+```
+
+- `PlaceholderMagnifierSource` — three procedurally generated or solid-colour
+  textures with an obvious visual signature per state (and a moving element in
+  `alive`/`fluorescent`, a frozen one in `dead`, so the stillness beat is testable).
+- `VideoMagnifierSource` — three `VideoPlayer`s rendering to `RenderTexture`s.
+
+Select via config (`"magnifier_source": "placeholder" | "video"`). The placeholder
+is **not throwaway scaffolding** — keep it permanently as the regression harness, so
+the magnifier stays testable on a laptop with no footage and no device. That is
+exactly the role `fake_rig.py` plays for the server, and it is why the control
+system can be tested end-to-end with zero hardware.
+
+**Contract for the footage when it arrives** — decide these now so the shoot/render
+targets them:
+
+| Property | Requirement |
+|---|---|
+| Clips | exactly 3: `alive`, `fluorescent`, `dead` |
+| Looping | seamless — all three loop indefinitely and are never seeked |
+| Framing | identical framing/scale across all three, so a cross-fade reads as *the same polyps changing*, not a cut between three shoots |
+| Length | equal across the three, so their wraps coincide rather than landing at three different moments mid-fade |
+| `dead` | must read as **stillness**, not a black frame — absence of life, not absence of image |
+| Codec | HEVC, sized to the loupe mask, 30 or 60 fps |
+| Location | `StreamingAssets/`, filenames in config |
+
 ---
 
 ## 4. What changes in the existing scripts
@@ -231,15 +343,25 @@ architecture that is a direct violation — the server owns the arc.
   the correct state when tracking re-acquires a second later.
 - `ProximityTestRig` / `useManualDistance` (still the way to tune the zoom in-editor)
 
-**Result:** proximity drives *only* the magnifier. Every appearance decision comes
-off the wire. This is `CLAUDE.md` §9 rule 1, enforced by construction.
+**Revive** (retired during the July pivot, needed again by §3.2): the loupe reveal —
+the `_LOUPE_ON` shader keyword and `_LoupeCenter` / `_LoupeRadius`. The controller
+currently forces `_LOUPE_ON` **off** so the whole coral shows. With footage back in
+the design, proximity drives the reveal region again — but now it reveals *only*
+where the polyps show, never *what condition they are in*. Loupe centre/radius must
+be in the **Pool transform's local space** (`CLAUDE.md` §8).
+
+**Result:** proximity drives the reveal and the magnification. Every appearance
+decision, on both layers, comes off the wire. This is `CLAUDE.md` §9 rule 1,
+enforced by construction rather than by discipline.
 
 ### New scripts
 
 | Script | Responsibility |
 |---|---|
 | `CoralOscListener.cs` | Owns receiver + transmitter (shared socket), hello heartbeat, exposes `State`/`Intensity`/`Temp`/`SecondsSinceMessage`/`EverReceived`. No rendering knowledge. |
-| `CoralAppearance.cs` | Reads the listener, applies §3's mapping + slew to the runtime material instance. No networking knowledge. |
+| `CoralAppearance.cs` | Reads the listener, applies §3.1's mapping + slew to the runtime material instance. No networking knowledge. |
+| `CoralMagnifier.cs` | Reads the listener, applies §3.2's weights + slew, pushes the two top-weighted textures and the blend factor to the loupe material. |
+| `IMagnifierSource` + `PlaceholderMagnifierSource` + `VideoMagnifierSource` | §3.3's seam. |
 | `CoralConfig.cs` | JSON config load (§5). |
 | `CoralHud.cs` | On-device diagnostic overlay (§7). |
 
@@ -268,6 +390,12 @@ timings** (`CLAUDE.md`, control repo). At minimum:
   "crossfade_s": 3.0,
   "fluor_point": 0.5,
   "suppress_emission_during_recovery": true,
+  "magnifier_source": "placeholder",
+  "magnifier_clips": {
+    "alive": "polyps-alive.mp4",
+    "fluorescent": "polyps-fluorescent.mp4",
+    "dead": "polyps-dead.mp4"
+  },
   "hud_enabled": true
 }
 ```
@@ -336,8 +464,12 @@ A toggleable overlay showing:
 ```
 id=ipad-A  server=192.168.8.10:9000  listening=9001
 state=2 Bleached   intensity=1.00   T=27.9C
+stress=1.00   magnifier=dead 1.00 / alive 0.00   src=placeholder
 last broadcast 0.2s ago   hello sent 1.4s ago   rx=1284
 ```
+
+Showing the *applied* values (`stress`, magnifier weights) next to the *received*
+ones is what separates a network fault from a mapping fault at a glance.
 
 Every failure mode in this system is silent by design — a lost datagram, an
 unregistered client, a denied permission, a wrong subnet and a stopped server all
@@ -419,33 +551,37 @@ Latch `intensity` at the moment of bleaching is ≈ **0.9**, not 1.0 — the map
 
 ---
 
-## 10. Two open items to resolve, not to silently pick
+## 10. Open items
 
-**1. Magnifier: rendered tissue vs. polyp footage — a live discrepancy.**
+**Magnifier — RESOLVED 2026-07-27.** The magnifier keeps the **polyp footage**
+described in `ARCHITECTURE.md` §6.4 and `CLAUDE.md` §9, and that footage **follows
+the installation state**: alive when the reef is alive, fluorescent when it is
+fluorescent, dead when it is dead. See §3.2. The July pivot to surface tissue was
+about *how the coral itself is rendered* (cerioid → glowing honeycomb, not discrete
+polyp meshes); it did not replace the magnifier. The two layers coexist, and both
+take their condition off the wire.
 
-The control repo (`docs/ARCHITECTURE.md` §6.4) and this repo's `CLAUDE.md` §9 both
-describe the magnifier as revealing **embedded polyp video** (VideoPlayer →
-RenderTexture, masked reveal, fading to stillness in state 2). This project pivoted
-in July 2026 to **fluorescent tissue rendered on the coral surface** plus
-magnification — because _Goniastrea_ is cerioid, so a honeycomb of glowing tissue
-is the accurate view and discrete polyps are not.
+The control repo's documents are therefore correct as written and need no
+amendment. `PROGRESS.md` in this repo, however, still describes proximity as the
+thing that bleaches — update its snapshot once §4's split lands.
 
-The pivot is right and is already working on device. **Recommendation:** keep it,
-and update `ARCHITECTURE.md` §6.4 and `CLAUDE.md` §9 in the control repo to describe
-magnified rendered tissue. Don't reintroduce video to satisfy a stale document.
+Still to settle: **whether the surface tissue and the magnifier footage should be
+visibly the same organism at the same moment.** They will be seen together, one
+inside the other. If the tissue is drained to white while the loupe still shows
+green polyps for two seconds because their slews differ, the illusion breaks. The
+simple fix is one shared `crossfade_s` and one shared slew — which is what §3
+specifies. Confirm it holds on device.
 
-What still needs answering: **what is state 2's "the life is gone" beat** now that
-there is no footage to still? The tissue draining to the bare white skeleton (which
-is literally the physical print) is a strong answer on its own — but if anything in
-the shader breathes or surges (`_SurgeBoost`), it should visibly stop. That absence
-is the installation's key emotional beat and shouldn't be only a colour change.
+**Repository cross-references — verified correct, no action needed.** This project
+is `github.com/hebbooz/thesis-ar-app`; the control repo is
+`github.com/hebbooz/thesis-installation-control`. Both repos' references to each
+other match their actual remotes.
 
-**2. Repository identity.** The control repo's README lists this project as
-`https://github.com/hebbooz/thesis-ar-app`; this project's `CLAUDE.md` calls the
-control repo `https://github.com/hebbooz/thesis-installation-control`. Locally,
-`virtual-polyp-rendering/` **is not a git repository at all** — there is no version
-control on a project that is one of two halves of an exhibition. Initialise it and
-fix the cross-references before the build gets any bigger.
+**Before §4's split:** removing serialized fields from `ProximityRevealController`
+drops the tuned inspector values held on the scene's component — the *asset*
+change is versioned, the lost values are not recoverable from it. Note the current
+values from `PROGRESS.md` or the inspector before deleting anything, and commit the
+scene beforehand.
 
 ---
 
@@ -457,12 +593,21 @@ fix the cross-references before the build gets any bigger.
    server log, and pruning when the app is backgrounded.
 2. iOS Local Network permission and the pause/resume reconnect — on device, before
    any appearance work. These are the two failures that masquerade as render bugs.
-3. `CoralAppearance` with §3's mapping and slew, driven by `drive_projection.py`
+3. `CoralAppearance` with §3.1's mapping and slew, driven by `drive_projection.py`
    holding each state still.
 4. Strip the local arc out of `ProximityRevealController`, leaving magnification.
-5. Run the full arc end-to-end from the keyboard rig, then the Phase 7 acceptance
+5. `CoralMagnifier` + the §3.3 seam on `PlaceholderMagnifierSource`. Revive the
+   loupe keyword. Verify all four states and both backward transitions with the
+   placeholder — **the entire magnifier is finishable and testable before a single
+   frame of footage exists**, which is the point of the seam.
+6. Run the full arc end-to-end from the keyboard rig, then the Phase 7 acceptance
    test with three devices.
+7. When the footage lands: encode to the §3.2 contract, flip `magnifier_source` to
+   `"video"`, retune nothing. If that flip requires a code change, the seam was
+   built wrong.
 
 Step 1 before step 3 is not optional. A listener bug and a mapping bug produce the
 same symptom — a coral stuck on the wrong look — and separating them after the fact
-costs far more than the HUD does to build.
+costs far more than the HUD does to build. Likewise step 5 before the footage
+arrives: waiting on assets to start the integration is how a pending delivery turns
+into a blocked build.
