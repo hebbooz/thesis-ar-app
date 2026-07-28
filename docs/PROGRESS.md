@@ -85,8 +85,21 @@ CoralTissue material applied". That is **not true of the committed tree**:
   `Assets/SamplesResources/` has been deleted. So the build scene list points at
   nothing.
 
-The device builds of 12–14 July were real, so the wiring existed in the Editor at the
-time; it was never saved into a tracked scene, or was lost with `SamplesResources/`.
+**Root cause — confirmed 2026-07-28.** Of the two possibilities above, it was the
+second. `Library/LastSceneManagerSetup.txt` shows the last scene Unity had open was
+`Assets/SamplesResources/Scenes/0-Main.unity` — the **Vuforia sample scene**. The
+coral, the ModelTarget and the controller were wired up *inside a sample scene*, so
+deleting `Assets/SamplesResources/` deleted the working scene with it. The device
+builds of 12–14 July were real; they were built from that scene.
+
+> **The lesson, because this document caused it.** An earlier revision of this very
+> section described `Assets/SamplesResources/` as "Vuforia-sample clutter, safe to
+> ignore/delete" — while the working scene was sitting in it. Deleting it was
+> *following the documentation*. Two rules follow: **never build in a vendor's sample
+> folder** (create the scene under `Assets/Scenes/` from the start), and **never call
+> a directory disposable without checking what is open in it.** The rebuild is now a
+> script (below) precisely so that losing a scene costs minutes instead of days.
+
 **Consequence:** the scene has to be rebuilt, and there were no tuned inspector values
 to lose when `CONTROL_INTEGRATION.md` §11 step 4 deleted the serialized fields (§10's
 warning about that turned out to be moot here). Every *asset* it needs does still
