@@ -269,9 +269,18 @@ not the way in. The weights collapse to one expression:
 (float wAlive, float wFluoro, float wDead) = state switch
 {
     0 or 1 => (1f - intensity, intensity, 0f),
+    2      => (0f, 0f, 1f),          // pinned, mirroring §3.1's `2 => 1f`
     _      => (1f - intensity, 0f, intensity),
 };
 ```
+
+State 2 pins `dead = 1` instead of deriving it, **deliberately duplicating the special
+case in §3.1's tissue mapping**. In service the two forms are identical, because the
+server holds `intensity` at 1.0 for the whole of state 2. The pin matters off-contract:
+a state-2 message carrying `intensity 0.9` — from `tools/drive_projection`, or from any
+future protocol slip — would otherwise bleach the tissue completely while the magnifier
+still showed a tenth of a living polyp. The layers are seen together, one inside the
+other, so they must not be *able* to disagree about what a latched bleach looks like.
 
 Reuse the slew from §3.1 (`Mathf.MoveTowards` at `1/crossfadeSeconds`) on the
 weights, and take the same **snap-don't-slew** exception on the first broadcast

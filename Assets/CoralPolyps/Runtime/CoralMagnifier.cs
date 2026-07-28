@@ -92,12 +92,23 @@ namespace CoralPolyps
             float intensity = useManualState ? manualIntensity : (listener != null ? listener.Intensity : 0f);
 
             // State selects, intensity interpolates — the same rule as everywhere else.
-            // intensity is pinned at 1.0 in state 2 and ramps 1.0 → 0.0 across state 3,
-            // so states 2 and 3 are the same blend: no special case for the latch, and
-            // recovery walks dead → alive without ever passing through fluorescent.
+            // Recovery walks dead → alive without ever passing through fluorescent,
+            // because fluorescence is a stress response: the way out is not the way in.
+            //
+            // State 2 pins dead=1 rather than deriving it from intensity, mirroring
+            // CoralAppearance's `2 => 1f`. In service this changes nothing — the server
+            // holds intensity at 1.0 for the whole of state 2, so the derived form gives
+            // the same answer. It matters off-contract: driven by tools/drive_projection
+            // (or by any future protocol slip) a state-2 message carrying intensity 0.9
+            // would otherwise leave the tissue fully bleached while the magnifier still
+            // showed a tenth of a living polyp. The two layers are seen together, one
+            // inside the other, so they must not be *able* to disagree about what a
+            // latched bleach looks like. That coherence is worth more than the tidiness
+            // of collapsing 2 and 3 into one arm.
             (float tAlive, float tFluoro, float tDead) = state switch
             {
                 0 or 1 => (1f - intensity, intensity, 0f),
+                2      => (0f, 0f, 1f),
                 _      => (1f - intensity, 0f, intensity),
             };
 
