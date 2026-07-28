@@ -1,7 +1,9 @@
 {
     "name": "CoralPolyps.Runtime",
     "rootNamespace": "CoralPolyps",
-    "references": [],
+    "references": [
+        "extOSC"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

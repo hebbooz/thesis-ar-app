@@ -2,6 +2,11 @@
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
+#if UNITY_IOS
+using System.IO;
+using UnityEditor.Callbacks;
+using UnityEditor.iOS.Xcode;
+#endif
 
 namespace CoralPolyps
 {
@@ -132,6 +137,48 @@ namespace CoralPolyps
                 EditorApplication.Exit(1);
             }
         }
+
+#if UNITY_IOS
+        /// <summary>
+        /// Info.plist keys Unity does not expose in Player Settings
+        /// (CONTROL_INTEGRATION.md §6.1 and §5).
+        ///
+        /// NSLocalNetworkUsageDescription is the one that will cost you a day.
+        /// Since iOS 14, sending or receiving UDP on the LAN requires it; without
+        /// the key the socket opens, the sends "succeed", and NOTHING EVER ARRIVES —
+        /// no error anywhere, just a coral permanently at state 0. That symptom is
+        /// indistinguishable from a wrong subnet or a stopped server, which is why
+        /// CoralHud exists. The permission prompt appears on first local-network
+        /// access; a Deny is per-install and reinstalling re-prompts.
+        ///
+        /// The two file-sharing keys let coral-ar.json be edited on the device over
+        /// USB via the Files app, so the server address can be corrected without a
+        /// rebuild.
+        /// </summary>
+        [PostProcessBuild(999)]
+        public static void AddIosPlistKeys(BuildTarget target, string pathToBuiltProject)
+        {
+            if (target != BuildTarget.iOS) return;
+
+            string plistPath = Path.Combine(pathToBuiltProject, "Info.plist");
+            if (!File.Exists(plistPath))
+            {
+                Debug.LogError($"[iOS] Info.plist not found at {plistPath} — local network access will fail silently.");
+                return;
+            }
+
+            var plist = new PlistDocument();
+            plist.ReadFromFile(plistPath);
+
+            plist.root.SetString("NSLocalNetworkUsageDescription",
+                "Coral AR receives the installation's live coral state over the local network.");
+            plist.root.SetBoolean("UIFileSharingEnabled", true);
+            plist.root.SetBoolean("LSSupportsOpeningDocumentsInPlace", true);
+
+            plist.WriteToFile(plistPath);
+            Debug.Log("[iOS] Info.plist: added NSLocalNetworkUsageDescription + file sharing keys.");
+        }
+#endif
     }
 }
 #endif

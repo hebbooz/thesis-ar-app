@@ -1,0 +1,17 @@
+{
+  "server_host": "192.168.8.10",
+  "server_port": 9000,
+  "listen_port": 9001,
+  "client_id": "",
+  "hello_interval_s": 5.0,
+  "crossfade_s": 3.0,
+  "fluor_point": 0.5,
+  "suppress_emission_during_recovery": true,
+  "magnifier_source": "placeholder",
+  "magnifier_clips": {
+    "alive": "polyps-alive.mp4",
+    "fluorescent": "polyps-fluorescent.mp4",
+    "dead": "polyps-dead.mp4"
+  },
+  "hud_enabled": true
+}

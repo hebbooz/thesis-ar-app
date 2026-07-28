@@ -1,5 +1,15 @@
 {
+    "scopedRegistries": [
+    {
+      "name": "package.openupm.com",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.iam1337.extosc"
+      ]
+    }
+  ],
     "dependencies": {
+    "com.iam1337.extosc": "1.21.0",
     "com.ptc.vuforia.engine": "file:com.ptc.vuforia.engine-11.4.4.tgz",
     "com.unity.ext.nunit": "2.0.5",
     "com.unity.ide.rider": "3.0.39",
