@@ -31,6 +31,21 @@ namespace CoralPolyps
     ///     Target, which is a visual alignment against the print.
     /// Everything else — object graph, components, references, materials, volume — is
     /// constructed here.
+    ///
+    /// CONSEQUENCE OF THE FULL PREFAB UNPACK — read before retraining anything.
+    /// The coral is unpacked completely so that all wiring serializes into the scene
+    /// file (that is what makes it diffable, and it is the whole reason this script
+    /// exists). The cost is that there is NO PREFAB LINK left: the saved scene is a
+    /// SNAPSHOT. Nothing upstream propagates into it — in particular, **retraining the
+    /// `coral-rendering` Model Target database will not update the saved scene**, and
+    /// the coral's alignment will still be the one fitted to the OLD target
+    /// representation, which is the failure that matters because it is invisible until
+    /// the overlay is off on device.
+    ///
+    /// The recovery is to RE-RUN THIS SCRIPT and redo the two interactive steps above.
+    /// That is cheap now that the builder exists — but only if whoever retrains the
+    /// database knows to, which is exactly the class of knowledge that was lost with
+    /// the July scene. If you retrain, re-run.
     /// </summary>
     public static class SceneBuilder
     {

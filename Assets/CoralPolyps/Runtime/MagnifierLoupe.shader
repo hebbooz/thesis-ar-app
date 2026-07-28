@@ -51,10 +51,16 @@ Shader "CoralPolyps/MagnifierLoupe"
 
         [Header(Projection (object space))]
         // Tile size in the coral's own metres: how much of the coral one repeat of the
-        // footage covers. SMALLER = MORE MAGNIFIED. The coral is ~10 cm across, so a
-        // value near the loupe's diameter puts roughly one repeat inside the window
-        // and keeps any tiling seam out of sight. This is the tuning knob.
-        _FootageScale ("Footage tile size (coral metres)", Range(0.005, 0.5)) = 0.04
+        // footage covers. SMALLER = MORE MAGNIFIED. This is the tuning knob.
+        //
+        // KEEP IT AT OR ABOVE THE LOUPE'S DIAMETER — i.e. >= 2 x
+        // ProximityRevealController.maxLoupeRadius (0.06 m at the default 0.03 radius).
+        // Below that, more than one repeat fits inside the window and the tiling seam
+        // is on screen at all times. The 0.07 default leaves a little margin so the
+        // seam stays outside the window even as the loupe opens fully; raise toward
+        // 0.08 if one still shows at the edge. Going lower buys magnification at the
+        // price of a visible seam, so lower maxLoupeRadius with it.
+        _FootageScale ("Footage tile size (coral metres)", Range(0.005, 0.5)) = 0.07
 
         // 1 = smooth triplanar blend; high = effectively planar on the dominant axis.
         _ProjectionSharpness ("Planar-ness (high = single plane)", Range(1, 16)) = 4

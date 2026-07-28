@@ -105,14 +105,28 @@ rather than hand-editing the scene. Two steps remain genuinely interactive and t
 script reports them: picking the Model Target's database/target, and
 `Add Target Representation` + `Align Coral To Model Target`.
 
-> **⚠️ FIRST COMMIT AFTER OPENING UNITY MUST INCLUDE THE NEW `.meta` FILES.** The ten
-> new `.cs`/`.shader` files were written outside the Editor and have no `.meta` yet.
-> Unity generates them on import with fresh GUIDs; if they are not committed, every
-> machine generates its own, and any scene or material referencing these scripts
-> breaks on the next clone or CI run — silently, as a missing-script placeholder.
-> Check `git status` for `Assets/CoralPolyps/**/*.meta` before the next commit, and
-> commit them **before** running `Rebuild AR Scene`, so the saved scene references
-> GUIDs that are already tracked.
+> **⚠️ IF YOU RETRAIN THE MODEL TARGET DATABASE, RE-RUN THE BUILDER.** The builder
+> unpacks the coral prefab completely so the wiring serializes into the scene file —
+> that is what makes it diffable, and the point of the whole exercise. The cost is
+> that the saved scene is a **snapshot with no prefab link**: a retrained
+> `coral-rendering` database does **not** propagate into it, and the coral's alignment
+> will still be the one fitted to the *old* target representation. That misfit is
+> invisible in the editor and only shows up as a drifting overlay on device. Recovery
+> is cheap — re-run `Rebuild AR Scene` and redo the two interactive steps — but only
+> if you know to, which is precisely the kind of knowledge that vanished with the July
+> scene.
+
+> **⚠️ NEVER COMMIT A `.cs` OR `.shader` WITHOUT ITS `.meta`, IN THE SAME COMMIT.**
+> The ten new `.cs`/`.shader` files were written outside the Editor and have no
+> `.meta` yet; Unity generates them on first import. A source file committed without
+> its `.meta` gets a **different GUID on every machine that imports it**, so any scene
+> or material referencing it breaks on the next clone or CI run — silently, as a
+> missing-script placeholder. Check `git status` for `Assets/CoralPolyps/**/*.meta`
+> after Unity has imported, and commit them alongside their source.
+>
+> Ordering relative to `Rebuild AR Scene` is **irrelevant**: GUIDs are assigned at
+> **import**, not at commit, so by the time the builder runs the `.meta` files already
+> exist on disk and the scene will reference the same GUIDs either way.
 
 **Coral mesh:** `Assets/CoralPolyps/Coral/astraea_favistella.obj` — 100k tris,
 ~10 cm real scale, **Read/Write ON**, **Tangents = Calculate**.
@@ -347,9 +361,8 @@ not "works".
 - [x] **`SceneBuilder.cs`** — `Window > CoralPolyps > Rebuild AR Scene`.
 
 **Next, in order:**
-- [ ] **Commit the generated `.meta` files** the moment Unity has imported the new
-      scripts (see the warning above) — before building the scene, so it references
-      tracked GUIDs.
+- [ ] **Commit the generated `.meta` files** alongside their sources the moment Unity
+      has imported the new scripts (see the warning above).
 - [ ] **Run `Window > CoralPolyps > Rebuild AR Scene`**, then the two interactive Model
       Target steps it reports. Review the resulting `CoralAR.unity` diff — it should be
       readable, which is the point of building it from a script.
