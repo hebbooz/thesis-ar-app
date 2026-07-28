@@ -105,13 +105,31 @@ there is exactly the failure above. The three enum members are `Random`,
 - **Callbacks run on the Unity main thread.** A background thread enqueues packets;
   `OSCReceiver.Update()` drains the queue (capped at 20 ms per frame). Touching
   materials and transforms inside a bind callback is safe.
-- extOSC is not in *Unity's* registry, but it **is published on OpenUPM**, which is
-  how this project installs it (done 2026-07-28): a scoped registry plus
-  `"com.iam1337.extosc": "1.21.0"` in `Packages/manifest.json`. Preferred over the
-  GitHub `.unitypackage` and the Asset Store listing — the version is pinned in a
-  tracked file instead of ~600 vendored files landing in `Assets/`, and it arrives
-  with its own `extOSC` / `extOSC.Editor` asmdefs (hence the `extOSC` entry in
-  `CoralPolyps.Runtime.asmdef`). It is pure networking code and is URP-agnostic.
+- extOSC is **vendored as an embedded package** at `Packages/com.iam1337.extosc`
+  (v1.21.0), *not* pulled from a registry. It arrives with its own `extOSC` /
+  `extOSC.Editor` asmdefs — hence the `extOSC` entry in
+  `CoralPolyps.Runtime.asmdef`. Pure networking code, URP-agnostic.
+
+  **Why embedded, and do not "fix" this back to OpenUPM.** It was installed from
+  OpenUPM first (scoped registry + `"com.iam1337.extosc": "1.21.0"`), which is the
+  better default. But **extOSC 1.21.0 does not compile on Unity 6000.5**:
+  `Scripts/Editor/OSCHierarchyIcon.cs` calls
+  `EditorApplication.hierarchyWindowItemOnGUI` and
+  `EditorUtility.InstanceIDToObject(int)`, which Unity 6000.5 promoted from
+  obsolete-*warning* to obsolete-*error* (CS0619). The package is dated March 2025
+  and predates that Editor; 1.21.0 is the latest release, so there is no upstream
+  fix to wait for. A registry package lands in `Library/PackageCache/`, which
+  Unity overwrites on every resolve, so it cannot be patched in place.
+
+  **The patch:** `OSCHierarchyIcon.cs` is deleted. It only drew the extOSC icon
+  beside OSC components in the Hierarchy window — nothing depends on it, and
+  extOSC's custom inspectors (which *are* useful when wiring components) are
+  untouched. `Examples~` was also dropped: Unity ignores `~` folders, so it was
+  1.7 MB of pure repository weight.
+
+  **If a future extOSC release supports Unity 6000.5**, delete
+  `Packages/com.iam1337.extosc`, restore the scoped registry and the dependency
+  line, and confirm the editor assembly compiles before committing.
 
 ### Contract rules (from PROTOCOL.md §1)
 

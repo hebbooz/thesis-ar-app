@@ -3,6 +3,7 @@
     "rootNamespace": "CoralPolyps",
     "references": [
         "CoralPolyps.Runtime",
+        "Unity.RenderPipelines.Core.Runtime",
         "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [

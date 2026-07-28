@@ -14,7 +14,13 @@
       "Bash(python3 -m json.tool)",
       "Read(//Applications/Unity Hub.app/Contents/MacOS/**)",
       "Bash(\"/Applications/Unity Hub.app/Contents/MacOS/Unity Hub\" --help)",
-      "Bash(\"/Applications/Unity Hub.app/Contents/MacOS/Unity Hub\" -- --headless help)"
+      "Bash(\"/Applications/Unity Hub.app/Contents/MacOS/Unity Hub\" -- --headless help)",
+      "Read(//Users/HeberdenN21/Documents/2026 University/Thesis/code/tools/**)",
+      "Bash(curl -s \"https://api.github.com/repos/Iam1337/extOSC/contents/package.json\")",
+      "Bash(curl -s \"https://api.github.com/repos/Iam1337/extOSC/releases/latest\")",
+      "Bash(curl -s \"https://api.github.com/repos/Iam1337/extOSC/tags\")",
+      "Bash(curl -s \"https://api.github.com/repos/Iam1337/extOSC/contents/\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('tag',d['tag_name']\\); print\\('assets',[a['name'] for a in d.get\\('assets',[]\\)]\\)\")"
     ]
   }
 }

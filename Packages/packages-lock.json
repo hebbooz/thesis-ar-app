@@ -1,5 +1,13 @@
 {
   "dependencies": {
+    "com.iam1337.extosc": {
+      "version": "file:com.iam1337.extosc",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.ugui": "1.0.0"
+      }
+    },
     "com.ptc.vuforia.engine": {
       "version": "file:com.ptc.vuforia.engine-11.4.4.tgz",
       "depth": 0,
