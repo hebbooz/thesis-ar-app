@@ -6,8 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/SamplesResources/Scenes/0-Main.unity
-    guid: a09cb257d566c489595b16ab37547666
+    path: Assets/Scenes/CoralAR.unity
+    guid: 73e7af96f84f6438e8f35e5fb7fc9d4d
   m_configObjects:
     UnityEditor.XR.ARKit.ARKitSettings: {fileID: 11400000, guid: 7110c0809e76241bfaf2352b93539286,
       type: 2}

@@ -123,6 +123,36 @@ namespace CoralPolyps
 
         // --------------------------------------------------------------------- Coral
 
+        // ─────────────────────────────────────────────────────────────────────
+        // Measured alignment of Coral onto the Model Target's representation.
+        //
+        // Captured 2026-07-28 from a hand-checked align (Window > CoralPolyps >
+        // Align Coral To Model Target, then rotation corrected by eye against the
+        // corallites). LOCAL to ModelTarget.
+        //
+        // These are constants of the **coral-rendering database**, not of the mesh:
+        // the .obj carries one baked orientation and Vuforia's Model Target Generator
+        // re-centres and re-orients its own copy, so the offset between them is fixed
+        // for as long as that database is. Baking it here is what makes a rebuild
+        // reproduce the alignment instead of restarting it by hand — the scene was
+        // lost once already (see docs/PROGRESS.md).
+        //
+        // ⚠️ RETRAINING THE MODEL TARGET DATABASE INVALIDATES THESE. It will not
+        // announce itself: the coral will simply sit wrong. If you regenerate
+        // `coral-rendering`, re-run the align tool and replace these three lines.
+        // The rotation is not a clean 90° multiple and is not meant to be — it is the
+        // product of two independent baked orientations.
+        static readonly Vector3 AlignPosition = new Vector3(-0.1212f, 0.1312f, 0.0431f);
+        static readonly Vector3 AlignRotation = new Vector3(304.5564f, 247.5180f, 259.5213f);
+        static readonly Vector3 AlignScale    = new Vector3(1.37f, 1.37f, 1.37f);
+
+        static void ApplyMeasuredAlignment(Transform coral)
+        {
+            coral.localPosition = AlignPosition;
+            coral.localEulerAngles = AlignRotation;
+            coral.localScale = AlignScale;
+        }
+
         static GameObject BuildCoral(GameObject modelTarget)
         {
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(CoralModelPath);
@@ -138,7 +168,11 @@ namespace CoralPolyps
             // overrides, which is precisely the un-diffable state we are escaping.
             PrefabUtility.UnpackPrefabInstance(instance, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
             instance.name = "Coral";
-            if (modelTarget != null) instance.transform.SetParent(modelTarget.transform, false);
+            if (modelTarget != null)
+            {
+                instance.transform.SetParent(modelTarget.transform, false);
+                ApplyMeasuredAlignment(instance.transform);
+            }
 
             var renderer = instance.GetComponentInChildren<MeshRenderer>();
             if (renderer == null)
@@ -319,9 +353,14 @@ namespace CoralPolyps
                 Debug.Log("[scene] REMAINING MANUAL STEPS:\n" +
                           "  1. Select ModelTarget -> choose the 'coral-rendering' database and target.\n" +
                           "  2. On ModelTarget click 'Add Target Representation'.\n" +
-                          "  3. Window > CoralPolyps > Align Coral To Model Target " +
-                          "(Reference = the representation, Source = Coral), then disable the " +
-                          "representation's renderer.\n" +
+                          "  3. Alignment is ALREADY APPLIED from the measured constants at the " +
+                          "top of SceneBuilder.cs — you should not need the align tool. VERIFY it: " +
+                          "the coral's cups should sit in the representation's, checked at the RIM " +
+                          "and from a profile view. If it is off, the database was retrained — re-run " +
+                          "Window > CoralPolyps > Align Coral To Model Target and update those constants.\n" +
+                          "     Then DEACTIVATE the 'coral-rendering Target Representation' GameObject " +
+                          "— Editor-only calibration scaffolding. (The loupe's MeshCollider is on the " +
+                          "Coral renderer, so nothing at runtime refers to the representation.)\n" +
                           "  4. Play, or build to device.");
                 return;
             }

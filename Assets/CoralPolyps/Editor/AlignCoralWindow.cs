@@ -15,10 +15,21 @@ namespace CoralPolyps.EditorTools
     /// Usage:
     ///   1. Select the ModelTarget and click "Add Target Representation" — this spawns
     ///      the white print mesh as a child, placed exactly where the print will track.
+    ///      SceneBuilder does not create this; it is a Vuforia inspector button.
     ///   2. Window > CoralPolyps > Align Coral To Model Target.
-    ///   3. Reference = that representation object; Source = astraea_favistella.
-    ///   4. Align. Then disable the representation's renderer so only the glow shows
-    ///      (keep the object — it's the future occlusion mesh / loupe collider).
+    ///   3. Reference (print)  = "coral-rendering Target Representation" (the white mesh
+    ///                            from step 1 — the ROOT of it, not its _primitive_0 child).
+    ///      Source (virtual)   = "Coral".
+    ///      NB: pick the object named **Coral**, not "astraea_favistella" — SceneBuilder
+    ///      instantiates that .obj and renames it (SceneBuilder.cs, instance.name =
+    ///      "Coral"). Its "default" child holds the renderer; align the PARENT so the
+    ///      MagnifierLayer travels with it.
+    ///   4. Align. Then DEACTIVATE the representation GameObject so only the glow shows.
+    ///      It is Editor-only calibration scaffolding: the loupe's MeshCollider is added
+    ///      to the *Coral* renderer by SceneBuilder, and the occlusion depth mesh is not
+    ///      built yet, so nothing at runtime refers to the representation. (An earlier
+    ///      revision said "disable the renderer, keep the object" — that described the
+    ///      hand-built scene, where the representation was to double as the collider.)
     /// </summary>
     public class AlignCoralWindow : EditorWindow
     {
@@ -36,9 +47,12 @@ namespace CoralPolyps.EditorTools
                 "geometry coincides — matches world render bounds (position + uniform scale) and " +
                 "orientation. Pivot/scale independent; both must be the same scan.\n\n" +
                 "1. On ModelTarget, click 'Add Target Representation' (spawns the white print mesh).\n" +
-                "2. Reference = that representation object.\n" +
-                "3. Source = astraea_favistella.\n" +
-                "4. Align.", MessageType.Info);
+                "2. Reference = 'coral-rendering Target Representation' (that object's ROOT).\n" +
+                "3. Source = 'Coral'  (SceneBuilder renames the astraea_favistella .obj to this;\n" +
+                "   pick the parent, not its 'default' child, so MagnifierLayer travels with it).\n" +
+                "4. Align. Then DEACTIVATE the representation GameObject — it is Editor-only\n" +
+                "   calibration scaffolding and nothing runtime refers to it.",
+                MessageType.Info);
 
             reference = (Transform)EditorGUILayout.ObjectField(
                 "Reference (print)", reference, typeof(Transform), true);
