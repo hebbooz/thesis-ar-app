@@ -4,15 +4,19 @@ namespace CoralPolyps
 {
     /// <summary>
     /// EDITOR TEST RIG (throwaway): scrub a single 0..1 slider to feed the controller a
-    /// MANUAL distance, so you can watch the bleach + magnification respond in Play mode
+    /// MANUAL distance, so you can watch the loupe + magnification respond in Play mode
     /// without a device or live tracking. Nothing is physically moved — it just drives
     /// <see cref="ProximityRevealController.manualDistance"/>, and the controller does the
-    /// colour + scale from there exactly as it will on device.
+    /// reveal + scale from there exactly as it will on device.
+    ///
+    /// This rig no longer touches the coral's CONDITION — the healthy→bleached arc belongs
+    /// to the orchestration server. To scrub that, use CoralAppearance/CoralMagnifier's
+    /// useManualState, or drive the device from tools/drive_projection.py.
     ///
     /// With <see cref="autoRange"/> on, proximity 0 sits just beyond the farther of the
-    /// colour/magnify start distances (healthy, 1x) and proximity 1 just inside the nearer
-    /// of the full distances (fully bleached, magnified) — so the slider always sweeps the
-    /// whole story no matter how the ranges are tuned.
+    /// loupe/magnify start distances (window shut, 1x) and proximity 1 just inside the
+    /// nearer of the full distances (window open, magnified) — so the slider always sweeps
+    /// the whole range no matter how it is tuned.
     ///
     /// It also force-enables the coral renderer so you can see it even though there's no
     /// tracked target in the editor (Vuforia's event handler would otherwise hide it).
@@ -27,12 +31,12 @@ namespace CoralPolyps
         public ProximityRevealController controller;
 
         [Header("Scrub  (drag this in Play mode)")]
-        [Tooltip("0 = far (healthy, life-size)  ->  1 = closest (bleached, magnified).")]
+        [Tooltip("0 = far (loupe shut, life-size)  ->  1 = closest (loupe open, magnified).")]
         [Range(0f, 1f)] public float proximity = 0f;
 
         [Header("Distance range")]
-        [Tooltip("Derive the far/near sweep from the controller's colour + magnify ranges " +
-                 "so the slider always covers the full story. Turn off to set metres by hand.")]
+        [Tooltip("Derive the far/near sweep from the controller's loupe + magnify ranges " +
+                 "so the slider always covers the full range. Turn off to set metres by hand.")]
         public bool autoRange = true;
 
         [Tooltip("Distance (m) fed at proximity 0, when auto-range is off.")]
@@ -61,11 +65,10 @@ namespace CoralPolyps
             if (controller == null) return;
 
             float far = autoRange
-                ? Mathf.Max(Mathf.Max(controller.naturalDistance, controller.resetDistance),
-                            controller.magnifyStartDistance) * 1.1f
+                ? Mathf.Max(controller.loupeStartDistance, controller.magnifyStartDistance) * 1.1f
                 : farDistance;
             float near = autoRange
-                ? Mathf.Max(Mathf.Min(controller.peakDistance, controller.magnifyFullDistance) * 0.7f, 0.01f)
+                ? Mathf.Max(Mathf.Min(controller.loupeFullDistance, controller.magnifyFullDistance) * 0.7f, 0.01f)
                 : nearDistance;
 
             currentDistance = Mathf.Lerp(far, near, proximity);

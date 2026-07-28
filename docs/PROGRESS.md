@@ -1,6 +1,6 @@
 # PROGRESS.md — Status & roadmap
 
-_Last updated: 2026-07-14_
+_Last updated: 2026-07-28_
 
 A living record of what's built, the key decisions made along the way, and what
 remains. For the original vision see `CLAUDE.md`; for the phase-by-phase plan see
@@ -17,6 +17,16 @@ remains. For the original vision see `CLAUDE.md`; for the phase-by-phase plan se
 > in `BUILD_PLAN.md` Phase 6, `USER_STORIES.md` V3) is **superseded** and is
 > removed during integration. Remaining work is therefore **not** only refinement —
 > see `CONTROL_INTEGRATION.md` §11 for the order of work.
+>
+> **✅ INTEGRATION CODE LANDED 2026-07-28 — `CONTROL_INTEGRATION.md` §11 steps 1–5.**
+> `ProximityRevealController`'s local narrative (approach → peak → arm bleach →
+> retreat bleaches → reset) **has been deleted**; it now owns only magnification and
+> the loupe. Everything below that describes proximity driving colour is history,
+> not behaviour. See _"Installation integration"_ near the bottom for what exists.
+>
+> **⚠️ AND: the scene wiring described in _"Current concrete state"_ below is NOT in
+> this repository.** See the corrected bullet in that section — this is the single
+> thing most likely to mislead the next session.
 
 **The full loop works on device (2026-07-14):** the iPad tracks the physical
 3D print via a Vuforia Model Target, and leaning in reveals the fluorescent coral,
@@ -60,10 +70,26 @@ usage description, min iOS 16, iPad-only, bundle `com.thesis.coralpolyps`).
 `Mobile_RPAsset` is the active URP pipeline, **assigned across Graphics + all
 Quality levels**, **HDR ON**. (Don't remove that assignment — see gotchas.)
 
-**Working scene:** `Assets/Scenes/SampleScene.unity`. The coral GameObject is in it
-with the CoralTissue material applied. _(A Vuforia sample scene `0-Main.unity` and
-`Assets/SamplesResources/` — Astronaut etc. — also exist; that's Vuforia-sample
-clutter, safe to ignore/delete, not part of this project.)_
+**Working scene: ⚠️ NOT IN THE REPOSITORY (verified 2026-07-28).** This entry used to
+read "`Assets/Scenes/SampleScene.unity` — the coral GameObject is in it with the
+CoralTissue material applied". That is **not true of the committed tree**:
+
+- `Assets/Scenes/SampleScene.unity` is the **stock scene** — Main Camera, Directional
+  Light, Global Volume, nothing else. It has one commit ("first commit", 8 July) and
+  has never contained the coral, the ModelTarget, or `ProximityRevealController`
+  (searched by script GUID across all history).
+- `ProjectSettings/EditorBuildSettings.asset` still lists
+  `Assets/SamplesResources/Scenes/0-Main.unity`, and **that file no longer exists** —
+  `Assets/SamplesResources/` has been deleted. So the build scene list points at
+  nothing.
+
+The device builds of 12–14 July were real, so the wiring existed in the Editor at the
+time; it was never saved into a tracked scene, or was lost with `SamplesResources/`.
+**Consequence:** the scene has to be rebuilt, and there were no tuned inspector values
+to lose when `CONTROL_INTEGRATION.md` §11 step 4 deleted the serialized fields (§10's
+warning about that turned out to be moot here). Every *asset* it needs does still
+exist — mesh, `CoralTissue.mat` with its tuned look-dev values, textures, the
+`coral-rendering` Model Target database, the bake.
 
 **Coral mesh:** `Assets/CoralPolyps/Coral/astraea_favistella.obj` — 100k tris,
 ~10 cm real scale, **Read/Write ON**, **Tangents = Calculate**.
@@ -250,6 +276,57 @@ look-dev material; the raycast → nearest-point → origin fallback chain is ro
       fine-tune on device (each device change needs a fresh Unity→Xcode build — quit Chrome).
       _(FILE_DOCS.md still describes the old loupe reveal — update it once this mechanic is
       validated on device.)_
+
+### Installation integration (`CONTROL_INTEGRATION.md` §11) — CODE DONE, UNVERIFIED
+
+**Steps 1–5 written 2026-07-28. None of it has been run yet** — not in Play mode, not
+against the server, not on device. Treat every box below as "compiles-and-reviewed",
+not "works".
+
+- [x] **extOSC 1.21.0** via an OpenUPM scoped registry in `Packages/manifest.json`
+      (+ `extOSC` in `CoralPolyps.Runtime.asmdef`). Unity resolves it on next focus.
+- [x] **`CoralConfig.cs`** — `persistentDataPath/coral-ar.json` → `StreamingAssets/
+      coral-ar.json` → built-in defaults, fail-soft at each step; stable per-device
+      `client_id` in PlayerPrefs. Default shipped at `Assets/StreamingAssets/coral-ar.json`.
+- [x] **`CoralOscListener.cs`** — receiver + transmitter on **one shared socket**
+      (`LocalPortMode.FromReceiver`), 5 s hello heartbeat, reconnect + immediate hello
+      on `OnApplicationPause(false)`. Holds the last value on silence.
+- [x] **`CoralHud.cs`** — §7's status line, colour-coded on broadcast age, three-finger
+      tap to toggle, **editable server host** that saves and reconnects live.
+- [x] **`BuildScript.AddIosPlistKeys`** — `PostProcessBuild` adds
+      `NSLocalNetworkUsageDescription` (without it UDP silently never arrives) plus
+      `UIFileSharingEnabled` / `LSSupportsOpeningDocumentsInPlace`.
+- [x] **`CoralAppearance.cs`** — §3.1's `(state, intensity)` → `_Stress`, one slew,
+      snap-don't-slew on first convergence, emission held at 0 through recovery.
+- [x] **`ProximityRevealController.cs` stripped** — the local narrative is **deleted**.
+      Keeps distance measurement + magnification; **revives the loupe** (`_LOUPE_ON`,
+      `_LoupeCenter`, `_LoupeRadius`) and pushes it to `loupeTargets`. On target-lost it
+      resets the transform and shuts the loupe, and **never touches appearance**.
+- [x] **`CoralMagnifier.cs`** + `IMagnifierSource` / `PlaceholderMagnifierSource` /
+      `VideoMagnifierSource` + **`MagnifierLoupe.shader`** — §3.2's weights, the §3.3
+      seam, and a URP-safe in-shader composite (**not** the projection player's
+      `OnRenderImage`, which never fires under URP).
+
+**Next, in order:**
+- [ ] **Rebuild the scene** (see the corrected _"Working scene"_ note above) and fix the
+      stale entry in `EditorBuildSettings`. New wiring beyond the old setup: a
+      `CoralOscListener` + `CoralHud` + `CoralAppearance`, and a duplicate coral mesh
+      carrying `MagnifierLoupe` assigned to both `CoralMagnifier.magnifierRenderer` and
+      `ProximityRevealController.loupeTargets`.
+- [ ] **§11 step 1 verification** — HUD tracks `tools/fake_client.py` value-for-value
+      against `src/server.py` + `fake_rig.py`, hello registration appears in the server
+      log, and the entry is pruned when the app backgrounds.
+- [ ] **§11 step 2 on device** — Local Network prompt appears and is accepted; sleep/wake
+      resyncs. If it responds to `drive_projection.py` but not to the real server, the
+      hello is leaving the wrong port.
+- [ ] **§11 steps 3+5 look-dev** — hold each state still with
+      `drive_projection.py --state 0|1|2|3`; provoke both backward transitions (3→2, 2→1).
+      Confirm the tissue and the loupe agree at every moment (§10's open item).
+- [ ] Tune `loupeStart/FullDistance`, `maxLoupeRadius` and `_FootageScale` on device.
+- [ ] **§11 step 6** — full arc from the keyboard rig, then the three-device Phase 7
+      acceptance test.
+- [ ] **§11 step 7** — footage lands: encode to §3.2's contract, flip `magnifier_source`
+      to `"video"`, retune nothing.
 
 ### Phase 8 — Endurance & exhibition
 - [ ] All-day thermal / framerate soak; test the actual room's lighting.

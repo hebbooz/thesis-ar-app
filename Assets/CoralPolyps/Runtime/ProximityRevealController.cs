@@ -4,65 +4,48 @@ using UnityEngine.Rendering;
 namespace CoralPolyps
 {
     /// <summary>
-    /// Stage 4 — proximity drives the coral (REVISED 2026-07-14 after the first device test).
+    /// Stage 4 — proximity drives the REVEAL and the MAGNIFICATION, and nothing else
+    /// (CONTROL_INTEGRATION.md §4).
     ///
-    /// The old loupe "reveal fade" is retired. New behaviour, when the coral is tracked:
-    ///   - It is shown at FULL fluorescence by default (far away = healthy glowing coral).
-    ///     No fade-in; the shader's <c>_LOUPE_ON</c> keyword stays OFF so the whole coral
-    ///     shows.
-    ///   - As the camera nears, the fluorescence BLEACHES GRADUALLY — the colour arc is
-    ///     spread across the whole approach distance (drives the material's <c>_Stress</c>),
-    ///     so it shifts slowly instead of snapping through the colours.
-    ///   - As the camera nears, the coral MAGNIFIES — it scales up about its own centre so
-    ///     it reads as zooming into the polyps (the "magnifying glass" of the piece).
+    /// This class used to implement the whole narrative locally: approach → peak
+    /// fluorescence → arm bleach → retreat bleaches → reset. Under the installation
+    /// architecture that is a direct violation — the orchestration server owns the
+    /// healthy→bleached arc, and a visitor changes the coral by pressing a button at
+    /// the water bath, not by moving the iPad. That state machine is gone; _Stress
+    /// now comes off the wire via CoralAppearance.
     ///
-    /// Two independent proximity arcs (colour + magnification), each far→near, each with
-    /// its own distance range + curve. Distances are WORLD metres; measured from the camera
-    /// to the coral's tracked bounds centre (stable — unaffected by the magnification).
+    /// What proximity still owns:
+    ///   - MAGNIFICATION — the coral scales up about the surface you are inspecting
+    ///     as the camera nears. The magnifying-glass zoom of the piece.
+    ///   - THE LOUPE — a soft world-space sphere that opens as you lean in, marking
+    ///     the region where the magnifier's polyp footage is revealed. It controls
+    ///     how much of the micro-scale you see, never what condition it is in.
     ///
-    /// Registration note: at 1× (far) the coral sits 1:1 on the print; as it magnifies it
-    /// intentionally grows past the print. So tighten registration against the FAR/base state.
+    /// Both arcs run far→near, each with its own distance range and curve. Distances
+    /// are WORLD metres, measured from the camera to the coral's tracked bounds
+    /// (stable — unaffected by the magnification).
+    ///
+    /// Registration note: at 1× (far) the coral sits 1:1 on the print; as it magnifies
+    /// it intentionally grows past it. Tighten registration against the FAR/base state.
     /// </summary>
     public class ProximityRevealController : MonoBehaviour
     {
         [Header("References")]
-        [Tooltip("The coral mesh renderer (its material is driven; its bounds give the tracked centre). Required.")]
+        [Tooltip("The coral mesh renderer. Its bounds give the tracked centre used for every " +
+                 "distance measurement. Required.")]
         public Renderer coralRenderer;
 
         [Tooltip("The AR camera. Defaults to Camera.main if empty.")]
         public Camera cam;
 
-        [Tooltip("Transform scaled/moved for magnification. Defaults to the coral renderer's own transform " +
-                 "so the aligned parent (ModelTarget child) is left untouched.")]
+        [Tooltip("Transform scaled/moved for magnification. Defaults to the coral renderer's own " +
+                 "transform so the aligned parent (ModelTarget child) is left untouched.")]
         public Transform coralRoot;
 
-        [Header("Appearance cycle: natural -> fluorescent -> bleached -> reset")]
-        [Tooltip("Where PEAK fluorescence sits on the 0..1 arc. Pushed to the material's _FluorPoint " +
-                 "so shader and controller always agree.")]
-        [Range(0.1f, 0.9f)] public float fluorPoint = 0.5f;
-
-        [Tooltip("At or beyond this distance the coral rests fully NATURAL (arc 0).")]
-        public float naturalDistance = 0.60f;
-
-        [Tooltip("At or within this distance the coral hits PEAK FLUORESCENCE (max closeness). " +
-                 "Reaching it arms the bleach.")]
-        public float peakDistance = 0.10f;
-
-        [Tooltip("AFTER peaking, pulling back out to this distance completes the BLEACH (arc 1).")]
-        public float bleachFullDistance = 0.45f;
-
-        [Tooltip("Once bleached, beyond this distance it blends back to natural for the next viewer.")]
-        public float resetDistance = 0.55f;
-
-        [Tooltip("Seconds for the bleached -> natural reset blend (emission is suppressed during it " +
-                 "so it doesn't flash fluorescent on the way back).")]
-        public float resetBlendTime = 1.5f;
-
-        [Tooltip("Shapes the approach: natural -> peak fluorescence.")]
-        public AnimationCurve approachCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
-
-        [Tooltip("Shapes the retreat: fluorescent -> bleached.")]
-        public AnimationCurve bleachCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+        [Tooltip("Optional collider on the coral. With one assigned the loupe centres where the " +
+                 "viewer is actually looking (a ray through the screen centre); without one it " +
+                 "falls back to the nearest point on the coral's bounds.")]
+        public Collider coralCollider;
 
         // WARNING: magnification INHERENTLY breaks registration. Scaling the coral moves its
         // surface off the print, and the anchor is camera-relative, so the coral shifts as the
@@ -89,6 +72,27 @@ namespace CoralPolyps
                  "grows evenly about the middle but the near face bulges toward the camera.")]
         public MagnifyAnchor magnifyAnchor = MagnifyAnchor.FrontSurface;
 
+        [Header("Loupe reveal arc (metres from coral surface)")]
+        [Tooltip("Renderers whose material carries the loupe properties — the magnifier layer. " +
+                 "_LOUPE_ON is enabled on a runtime instance of each and its centre/radius driven " +
+                 "here. Leave empty to compute the loupe without pushing it anywhere (the values " +
+                 "are still exposed as LoupeCenter / LoupeRadius).")]
+        public Renderer[] loupeTargets = new Renderer[0];
+
+        [Tooltip("At or beyond this distance the loupe is shut (radius 0) — no polyp footage, " +
+                 "just the coral. Leaning in is what opens the window.")]
+        public float loupeStartDistance = 0.30f;
+
+        [Tooltip("At or within this distance the loupe reaches maxLoupeRadius. Must be < start.")]
+        public float loupeFullDistance = 0.08f;
+
+        [Tooltip("Loupe radius at closest range, in world metres. The coral is ~10 cm across, so " +
+                 "values near 0.03 read as a window onto part of it rather than the whole surface.")]
+        public float maxLoupeRadius = 0.03f;
+
+        [Tooltip("Shapes proximity (0 at start, 1 at full) -> loupe radius.")]
+        public AnimationCurve loupeCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
         [Header("Distance measurement")]
         [Tooltip("Measure to the coral's SURFACE rather than its hidden bounds centre, so the " +
                  "distances above mean the real gap between device and coral. With this off, a " +
@@ -101,9 +105,10 @@ namespace CoralPolyps
         [Range(0f, 1f)] public float distanceSmoothTime = 0.12f;
 
         [Header("Material")]
-        [Tooltip("On Start, put a runtime material instance into AR mode: fully OPAQUE with depth " +
-                 "write (100% opacity + correct cup/wall sorting) and the loupe keyword OFF (whole " +
-                 "coral shows). The bleach drains to the white skeleton, which matches the print.")]
+        [Tooltip("On Start, put the coral's runtime material instance into AR mode: fully OPAQUE " +
+                 "with depth write (100% opacity + correct cup/wall sorting) and the loupe keyword " +
+                 "OFF, so the tissue covers the whole coral. The tissue's condition is the server's " +
+                 "business; the loupe belongs to the magnifier layer, not to this material.")]
         public bool configureMaterialForAR = true;
 
         [Header("Testing (editor)")]
@@ -112,29 +117,34 @@ namespace CoralPolyps
         public bool useManualDistance = false;
         public float manualDistance = 1.0f;
 
+        /// <summary>Smoothed camera-to-coral distance in metres, or Infinity while untracked.</summary>
+        public float Distance => _smoothedDistance;
+
+        /// <summary>Current loupe centre in WORLD space (the point the viewer is peering at).</summary>
+        public Vector3 LoupeCenter { get; private set; }
+
+        /// <summary>Current loupe radius in world metres; 0 means shut.</summary>
+        public float LoupeRadius { get; private set; }
+
+        /// <summary>Current magnification factor (1 = life-size).</summary>
+        public float Magnification { get; private set; } = 1f;
+
         // --- Shader property IDs ---
-        private static readonly int StressID   = Shader.PropertyToID("_Stress");
-        private static readonly int FluorPointID    = Shader.PropertyToID("_FluorPoint");
-        private static readonly int EmissionScaleID = Shader.PropertyToID("_EmissionScale");
+        private static readonly int LoupeCenterID = Shader.PropertyToID("_LoupeCenter");
+        private static readonly int LoupeRadiusID = Shader.PropertyToID("_LoupeRadius");
         private static readonly int SrcBlendID = Shader.PropertyToID("_SrcBlend");
         private static readonly int DstBlendID = Shader.PropertyToID("_DstBlend");
         private static readonly int ZWriteID   = Shader.PropertyToID("_ZWrite");
         private const string LoupeKeyword = "_LOUPE_ON";
 
         // --- Runtime state ---
-        private Material _mat;
         private Transform _root;
         private Vector3 _baseLocalPos;
         private Vector3 _baseLocalScale;
         private bool _haveBase;
         private float _smoothedDistance = Mathf.Infinity;
         private float _distVel;
-
-        // Appearance-cycle state. The coral must REMEMBER that it peaked, because bleaching
-        // is only allowed after fluorescing (and then only while pulling away).
-        private bool _hasPeaked;    // reached max closeness -> bleach is armed
-        private bool _resetting;    // blending bleached -> natural for the next viewer
-        private float _stress;      // current arc value 0..1
+        private Material[] _loupeMats;
 
         private void Awake()
         {
@@ -149,28 +159,43 @@ namespace CoralPolyps
             _baseLocalScale = _root.localScale;
             _haveBase = true;
 
-            _mat = coralRenderer.material; // per-renderer instance (auto-freed; never dirties the asset)
-            if (configureMaterialForAR && _mat != null)
+            if (configureMaterialForAR)
             {
-                _mat.DisableKeyword(LoupeKeyword);                 // no loupe -> the whole coral shows
-                _mat.SetFloat(SrcBlendID, (float)BlendMode.One);   // OPAQUE: no see-through, and...
-                _mat.SetFloat(DstBlendID, (float)BlendMode.Zero);
-                _mat.SetFloat(ZWriteID, 1f);                       // ...depth write -> cups/walls sort correctly
-                _mat.renderQueue = (int)RenderQueue.Geometry;
+                // Per-renderer instance (auto-freed; never dirties the asset). The same
+                // instance CoralAppearance drives — Renderer.material caches it.
+                var mat = coralRenderer.material;
+                if (mat != null)
+                {
+                    mat.DisableKeyword(LoupeKeyword);                 // tissue covers the whole coral
+                    mat.SetFloat(SrcBlendID, (float)BlendMode.One);   // OPAQUE: no see-through, and...
+                    mat.SetFloat(DstBlendID, (float)BlendMode.Zero);
+                    mat.SetFloat(ZWriteID, 1f);                       // ...depth write -> cups/walls sort correctly
+                    mat.renderQueue = (int)RenderQueue.Geometry;
+                }
             }
 
-            // Keep the shader's peak-fluorescence point in sync with ours.
-            if (_mat != null) _mat.SetFloat(FluorPointID, fluorPoint);
-            ResetCycle();
+            // The magnifier's materials are the ones that DO want the loupe.
+            if (loupeTargets == null) loupeTargets = new Renderer[0];
+            _loupeMats = new Material[loupeTargets.Length];
+            for (int i = 0; i < loupeTargets.Length; i++)
+            {
+                if (loupeTargets[i] == null) continue;
+                _loupeMats[i] = loupeTargets[i].material;
+                _loupeMats[i].EnableKeyword(LoupeKeyword);
+            }
+
+            CloseLoupe();
         }
 
         private void LateUpdate()
         {
-            if (coralRenderer == null || cam == null || _mat == null || !_haveBase) return;
+            if (coralRenderer == null || cam == null || !_haveBase) return;
 
             // Tracking-loss gate: Vuforia's DefaultObserverEventHandler hides the coral by
-            // disabling the renderer (or the GameObject) on target-lost. Reset + skip so the
-            // magnified/bleached state doesn't hang around. (Skipped in manual test mode.)
+            // disabling the renderer (or the GameObject) on target-lost. Reset the TRANSFORM
+            // and shut the loupe so nothing hangs in space — but never touch the appearance.
+            // _Stress is the server's, and the coral must still be showing the correct state
+            // when tracking re-acquires a second later.
             // With magnification off the controller must NEVER touch the coral's transform —
             // that keeps registration purely Vuforia's, which is what we want by default.
             bool magnifyEnabled = maxMagnification > 1.0001f;
@@ -179,9 +204,7 @@ namespace CoralPolyps
                 (!coralRenderer.enabled || !coralRenderer.gameObject.activeInHierarchy))
             {
                 if (magnifyEnabled) ResetToBase();
-                // Viewer has walked off / target lost: snap the cycle back to natural so the
-                // next person starts fresh. Invisible right now, so no need to blend it.
-                ResetCycle();
+                CloseLoupe();
                 _smoothedDistance = Mathf.Infinity;
                 return;
             }
@@ -221,12 +244,10 @@ namespace CoralPolyps
                 : Mathf.SmoothDamp(_smoothedDistance, rawDist, ref _distVel, distanceSmoothTime);
             float d = _smoothedDistance;
 
-            // --- Appearance cycle: natural -> fluorescent -> bleached -> reset ---
-            UpdateAppearanceCycle(d);
-
             // --- Magnification: scale up as the camera nears ---
             float mt = InvLerpClamped(magnifyStartDistance, magnifyFullDistance, d);
             float k = Mathf.Lerp(1f, Mathf.Max(1f, maxMagnification), Mathf.Clamp01(magnifyCurve.Evaluate(mt)));
+            Magnification = k;
             if (k > 1.0001f)
             {
                 // Choose the point the scale radiates FROM. FrontSurface anchors on the near
@@ -249,78 +270,52 @@ namespace CoralPolyps
                 _root.localScale = _baseLocalScale * k;            // uniform scale about the pivot...
                 _root.position = P + (anchor - P) * (1f - k);      // ...shift so the anchor stays put
             }
+
+            // --- Loupe: the window onto the micro-scale opens as the viewer leans in ---
+            float lt = InvLerpClamped(loupeStartDistance, loupeFullDistance, d);
+            LoupeRadius = maxLoupeRadius * Mathf.Clamp01(loupeCurve.Evaluate(lt));
+            LoupeCenter = FindLoupeCenter(center);
+            PushLoupe();
+        }
+
+        /// <summary>
+        /// Where the viewer is peering: a ray through the screen centre onto the coral,
+        /// so the window follows the aim rather than sitting on a fixed spot. Falls back
+        /// to the nearest point on the bounds (no collider, or aimed off the coral) and
+        /// finally to the bounds centre, so it degrades rather than jumping to the origin.
+        /// </summary>
+        private Vector3 FindLoupeCenter(Vector3 boundsCenter)
+        {
+            if (!useManualDistance && coralCollider != null)
+            {
+                Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+                if (coralCollider.Raycast(ray, out RaycastHit hit, 10f)) return hit.point;
+            }
+            if (!useManualDistance) return coralRenderer.bounds.ClosestPoint(cam.transform.position);
+            return boundsCenter;
+        }
+
+        private void CloseLoupe()
+        {
+            LoupeRadius = 0f;
+            PushLoupe();
+        }
+
+        private void PushLoupe()
+        {
+            if (_loupeMats == null) return;
+            for (int i = 0; i < _loupeMats.Length; i++)
+            {
+                if (_loupeMats[i] == null) continue;
+                _loupeMats[i].SetVector(LoupeCenterID, LoupeCenter);
+                _loupeMats[i].SetFloat(LoupeRadiusID, LoupeRadius);
+            }
         }
 
         private void ResetToBase()
         {
             _root.localPosition = _baseLocalPos;
             _root.localScale = _baseLocalScale;
-        }
-
-        /// <summary>
-        /// Drives the natural -> fluorescent -> bleached -> natural cycle.
-        ///
-        /// The approach is fully reversible UNTIL the coral peaks. Reaching
-        /// <see cref="peakDistance"/> arms the bleach; from then on pulling away drives
-        /// fluorescent -> bleached (never back to natural). Once bleached and past
-        /// <see cref="resetDistance"/>, it blends back to natural for the next viewer —
-        /// with emission suppressed, so passing back through the fluorescent band on the
-        /// way down doesn't make it flash.
-        /// </summary>
-        private void UpdateAppearanceCycle(float d)
-        {
-            float emissionScale = 1f;
-
-            if (_resetting)
-            {
-                float step = Time.deltaTime / Mathf.Max(resetBlendTime, 0.01f);
-                _stress = Mathf.MoveTowards(_stress, 0f, step);
-                emissionScale = 0f;                       // no re-glow on the way back
-                if (_stress <= 0.001f)
-                {
-                    _stress = 0f;
-                    _resetting = false;
-                    _hasPeaked = false;                   // re-arm for the next viewer
-                }
-            }
-            else if (!_hasPeaked)
-            {
-                // APPROACH — natural -> peak fluorescence (reversible until it peaks).
-                float t = InvLerpClamped(naturalDistance, peakDistance, d);
-                _stress = Mathf.Clamp01(approachCurve.Evaluate(t)) * fluorPoint;
-                if (d <= peakDistance) _hasPeaked = true; // arm the bleach
-            }
-            else
-            {
-                // BLEACH — armed by the peak; pulling away drives fluorescent -> bleached.
-                // Guard the ordering. If bleachFullDistance ever ends up <= peakDistance the
-                // mapping inverts and the coral reads FULLY BLEACHED at max closeness — the
-                // opposite of the intent. (Easy to hit: this field predates the redesign, so a
-                // stale serialized value can carry over with the old, inverted meaning.)
-                float bleachEnd = Mathf.Max(bleachFullDistance, peakDistance + 0.01f);
-                float t = InvLerpClamped(peakDistance, bleachEnd, d);
-                _stress = fluorPoint + Mathf.Clamp01(bleachCurve.Evaluate(t)) * (1f - fluorPoint);
-                // Once they're far enough away, reset — whether or not the bleach finished.
-                // (Requiring a fully-complete bleach could strand it bleached forever if the
-                // viewer walked off mid-arc.)
-                if (d >= resetDistance) _resetting = true;
-            }
-
-            _mat.SetFloat(StressID, _stress);
-            _mat.SetFloat(EmissionScaleID, emissionScale);
-        }
-
-        /// <summary>Snap the cycle straight back to natural (used on start and tracking loss).</summary>
-        private void ResetCycle()
-        {
-            _stress = 0f;
-            _hasPeaked = false;
-            _resetting = false;
-            if (_mat != null)
-            {
-                _mat.SetFloat(StressID, 0f);
-                _mat.SetFloat(EmissionScaleID, 1f);
-            }
         }
 
         /// <summary>Like Mathf.InverseLerp but tolerant of a > b (reversed range) and clamped.</summary>
@@ -333,25 +328,15 @@ namespace CoralPolyps
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            if (peakDistance >= naturalDistance)
-                Debug.LogWarning($"[{nameof(ProximityRevealController)}] peakDistance ({peakDistance}) " +
-                    $"must be NEARER (smaller) than naturalDistance ({naturalDistance}) — you approach " +
-                    $"from natural to peak fluorescence.", this);
-
-            if (bleachFullDistance <= peakDistance)
-                Debug.LogWarning($"[{nameof(ProximityRevealController)}] bleachFullDistance " +
-                    $"({bleachFullDistance}) must be FARTHER (larger) than peakDistance ({peakDistance}) — " +
-                    $"the bleach happens as you pull AWAY from the peak.", this);
-
-            if (resetDistance < bleachFullDistance)
-                Debug.LogWarning($"[{nameof(ProximityRevealController)}] resetDistance ({resetDistance}) " +
-                    $"should be at or beyond bleachFullDistance ({bleachFullDistance}) so it finishes " +
-                    $"bleaching before it resets to natural.", this);
-
             if (magnifyFullDistance >= magnifyStartDistance)
                 Debug.LogWarning($"[{nameof(ProximityRevealController)}] magnifyFullDistance " +
                     $"({magnifyFullDistance}) should be NEARER (smaller) than magnifyStartDistance " +
                     $"({magnifyStartDistance}).", this);
+
+            if (loupeFullDistance >= loupeStartDistance)
+                Debug.LogWarning($"[{nameof(ProximityRevealController)}] loupeFullDistance " +
+                    $"({loupeFullDistance}) should be NEARER (smaller) than loupeStartDistance " +
+                    $"({loupeStartDistance}) — the loupe opens as you approach.", this);
         }
 
         private void OnDrawGizmosSelected()
@@ -359,12 +344,16 @@ namespace CoralPolyps
             Camera c = cam != null ? cam : Camera.main;
             if (c == null) return;
             Vector3 o = c.transform.position, f = c.transform.forward;
-            DrawRing(o, f, naturalDistance,      new Color(0.9f, 0.6f, 0.4f, 0.9f)); // natural (resting)
-            DrawRing(o, f, peakDistance,         new Color(0.2f, 1f, 0.9f, 0.9f));   // PEAK fluorescence
-            DrawRing(o, f, bleachFullDistance,   new Color(1f, 0.25f, 0.2f, 0.9f));  // fully bleached
-            DrawRing(o, f, resetDistance,        new Color(0.7f, 0.7f, 0.7f, 0.9f)); // resets to natural
+            DrawRing(o, f, loupeStartDistance,   new Color(0.7f, 0.7f, 0.7f, 0.9f)); // loupe shut
+            DrawRing(o, f, loupeFullDistance,    new Color(0.2f, 1f, 0.9f, 0.9f));   // loupe fully open
             DrawRing(o, f, magnifyStartDistance, new Color(0.2f, 0.8f, 1f, 0.9f));   // magnify begins
             DrawRing(o, f, magnifyFullDistance,  new Color(1f, 0.9f, 0.2f, 0.9f));   // max magnification
+
+            if (Application.isPlaying && LoupeRadius > 0f)
+            {
+                Gizmos.color = new Color(0.2f, 1f, 0.9f, 0.5f);
+                Gizmos.DrawWireSphere(LoupeCenter, LoupeRadius);
+            }
         }
 
         private static void DrawRing(Vector3 origin, Vector3 fwd, float dist, Color col)

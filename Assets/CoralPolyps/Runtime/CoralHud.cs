@@ -30,6 +30,9 @@ namespace CoralPolyps
         [Tooltip("The tissue layer, for the APPLIED half of the readout. Optional.")]
         public CoralAppearance appearance;
 
+        [Tooltip("The magnifier layer, for the APPLIED half of the readout. Optional.")]
+        public CoralMagnifier magnifier;
+
         [Tooltip("Visible on launch. Toggle any time with a three-finger tap (or H in the editor). " +
                  "Set hud_enabled:false in coral-ar.json to disable it entirely for the exhibition.")]
         public bool visible = true;
@@ -42,6 +45,7 @@ namespace CoralPolyps
         {
             if (listener == null) listener = FindFirstObjectByType<CoralOscListener>();
             if (appearance == null) appearance = FindFirstObjectByType<CoralAppearance>();
+            if (magnifier == null) magnifier = FindFirstObjectByType<CoralMagnifier>();
             if (!CoralConfig.Shared.hud_enabled) enabled = false;
         }
 
@@ -65,7 +69,9 @@ namespace CoralPolyps
 
             float pad = 10f * Scale;
             GUILayout.BeginArea(new Rect(pad, pad, Screen.width - pad * 2f, Screen.height - pad * 2f));
-            GUILayout.BeginVertical(_box);
+            // Sized to its content: the overlay is a status line, not a panel that
+            // swallows the whole screen.
+            GUILayout.BeginVertical(_box, GUILayout.ExpandWidth(false), GUILayout.ExpandHeight(false));
 
             if (listener == null)
             {
@@ -115,9 +121,17 @@ namespace CoralPolyps
         /// </summary>
         string AppliedLine()
         {
-            if (appearance == null) return null;
-            return $"stress={appearance.Stress:F2}   emission={appearance.EmissionScale:F2}   " +
-                   $"src={CoralConfig.Shared.magnifier_source}";
+            if (appearance == null && magnifier == null) return null;
+
+            string stress = appearance != null
+                ? $"stress={appearance.Stress:F2} em={appearance.EmissionScale:F2}"
+                : "stress=-";
+            string mag = magnifier != null
+                ? $"magnifier=alive {magnifier.WAlive:F2} / fluoro {magnifier.WFluorescent:F2} / " +
+                  $"dead {magnifier.WDead:F2}   src={magnifier.SourceName}"
+                : $"magnifier=-   src={CoralConfig.Shared.magnifier_source}";
+
+            return $"{stress}   {mag}";
         }
 
         /// <summary>

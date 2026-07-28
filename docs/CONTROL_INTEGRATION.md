@@ -105,9 +105,13 @@ there is exactly the failure above. The three enum members are `Random`,
 - **Callbacks run on the Unity main thread.** A background thread enqueues packets;
   `OSCReceiver.Update()` drains the queue (capped at 20 ms per frame). Touching
   materials and transforms inside a bind callback is safe.
-- extOSC is not in Unity's package registry — install the `.unitypackage` from
-  the GitHub releases (Iam1337/extOSC) or the Asset Store listing. It is pure
-  networking code and is URP-agnostic.
+- extOSC is not in *Unity's* registry, but it **is published on OpenUPM**, which is
+  how this project installs it (done 2026-07-28): a scoped registry plus
+  `"com.iam1337.extosc": "1.21.0"` in `Packages/manifest.json`. Preferred over the
+  GitHub `.unitypackage` and the Asset Store listing — the version is pinned in a
+  tracked file instead of ~600 vendored files landing in `Assets/`, and it arrives
+  with its own `extOSC` / `extOSC.Editor` asmdefs (hence the `extOSC` entry in
+  `CoralPolyps.Runtime.asmdef`). It is pure networking code and is URP-agnostic.
 
 ### Contract rules (from PROTOCOL.md §1)
 
