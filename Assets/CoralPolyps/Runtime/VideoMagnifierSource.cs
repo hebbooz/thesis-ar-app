@@ -65,7 +65,11 @@ namespace CoralPolyps
                 var rt = new RenderTexture((int)p.width, (int)p.height, 0, RenderTextureFormat.ARGB32)
                 {
                     name = $"magnifier-{fileName}",
-                    wrapMode = TextureWrapMode.Clamp,
+                    // Repeat to match the placeholder: the shader projects this across
+                    // the coral in object space, so outside one repeat it must tile
+                    // rather than streak the edge pixels. Tune _FootageScale so one
+                    // repeat covers the loupe and the seam never comes into view.
+                    wrapMode = TextureWrapMode.Repeat,
                 };
                 rt.Create();
                 p.targetTexture = rt;

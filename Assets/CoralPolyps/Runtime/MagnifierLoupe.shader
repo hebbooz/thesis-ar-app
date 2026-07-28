@@ -15,6 +15,25 @@ Shader "CoralPolyps/MagnifierLoupe"
     // masked reveal on a tracked surface is what this actually is, so the surface
     // shader is the right place for it.
     //
+    // THE FOOTAGE IS PROJECTED IN OBJECT SPACE, NOT SCREEN SPACE. That is the whole
+    // metaphor: with a real magnifying glass the content is attached to the OBJECT
+    // and the glass moves over it. Sampling in screen space would map a given cup to
+    // different footage texels as the device moved, so the polyps would slide across
+    // the coral — and USER_STORIES.md V4 requires the opposite ("polyps stay
+    // registered to the same cups from different angles").
+    //
+    // Object space rather than mesh UVs, because the scan's UVs were authored for the
+    // skeleton texture and would smear the footage across the honeycomb. Object space
+    // is rigidly attached to the mesh, so it survives tracking updates for free, and
+    // it ignores the magnification scale — so the footage magnifies WITH the coral,
+    // which is what a loupe should do.
+    //
+    // Triplanar rather than a single plane because the coral is a dome: over a ~6 cm
+    // loupe on a ~10 cm boulder the surface turns far enough that one plane visibly
+    // stretches on the flanks. _ProjectionSharpness collapses this toward a planar
+    // projection (high values pick the dominant axis), so the planar case is still
+    // available without a second shader.
+    //
     // Intended setup: a duplicate of the coral mesh sitting just over the tissue
     // layer, so the footage is occluded and registered exactly like the coral is.
 
@@ -30,11 +49,15 @@ Shader "CoralPolyps/MagnifierLoupe"
         _Brightness ("Footage brightness", Range(0, 4)) = 1.0
         _Opacity ("Footage opacity inside the loupe", Range(0, 1)) = 1.0
 
-        [Header(Framing)]
-        // Screen-space framing: the footage sits still and the loupe is a window that
-        // uncovers it, which reads as looking THROUGH a lens rather than as a decal
-        // smeared over the honeycomb's UVs. Tune on device.
-        _FootageScale ("Footage scale (smaller = more magnified)", Range(0.05, 2)) = 0.5
+        [Header(Projection (object space))]
+        // Tile size in the coral's own metres: how much of the coral one repeat of the
+        // footage covers. SMALLER = MORE MAGNIFIED. The coral is ~10 cm across, so a
+        // value near the loupe's diameter puts roughly one repeat inside the window
+        // and keeps any tiling seam out of sight. This is the tuning knob.
+        _FootageScale ("Footage tile size (coral metres)", Range(0.005, 0.5)) = 0.04
+
+        // 1 = smooth triplanar blend; high = effectively planar on the dominant axis.
+        _ProjectionSharpness ("Planar-ness (high = single plane)", Range(1, 16)) = 4
 
         [Header(Loupe Reveal (driven by ProximityRevealController))]
         [Toggle(_LOUPE_ON)] _LoupeOn ("Loupe reveal enabled", Float) = 1
@@ -70,12 +93,15 @@ Shader "CoralPolyps/MagnifierLoupe"
             struct Attributes
             {
                 float4 positionOS : POSITION;
+                float3 normalOS   : NORMAL;
             };
 
             struct Varyings
             {
                 float4 positionHCS : SV_POSITION;
                 float3 positionWS  : TEXCOORD0;
+                float3 positionOS  : TEXCOORD1;
+                float3 normalOS    : TEXCOORD2;
             };
 
             TEXTURE2D(_TexA); SAMPLER(sampler_TexA);
@@ -86,6 +112,7 @@ Shader "CoralPolyps/MagnifierLoupe"
                 float  _Brightness;
                 float  _Opacity;
                 float  _FootageScale;
+                float  _ProjectionSharpness;
                 float4 _LoupeCenter;
                 float  _LoupeRadius;
                 float  _LoupeSoftness;
@@ -97,36 +124,47 @@ Shader "CoralPolyps/MagnifierLoupe"
                 VertexPositionInputs pos = GetVertexPositionInputs(IN.positionOS.xyz);
                 OUT.positionHCS = pos.positionCS;
                 OUT.positionWS  = pos.positionWS;
+                OUT.positionOS  = IN.positionOS.xyz;   // rigidly attached to the coral
+                OUT.normalOS    = IN.normalOS;
                 return OUT;
+            }
+
+            // Triplanar sample of one clip, weighted by the object-space normal.
+            float3 SampleTriplanar(TEXTURE2D_PARAM(tex, samp), float3 p, float3 w)
+            {
+                float3 x = SAMPLE_TEXTURE2D(tex, samp, p.zy).rgb;
+                float3 y = SAMPLE_TEXTURE2D(tex, samp, p.xz).rgb;
+                float3 z = SAMPLE_TEXTURE2D(tex, samp, p.xy).rgb;
+                return x * w.x + y * w.y + z * w.z;
             }
 
             half4 frag(Varyings IN) : SV_Target
             {
-                // --- Screen-space framing, aspect-corrected so the footage is not
-                //     stretched by the iPad's orientation ---
-                float2 suv = IN.positionHCS.xy / _ScreenParams.xy;
-                float aspect = _ScreenParams.x / max(_ScreenParams.y, 1.0);
-                float2 uv = suv - 0.5;
-                if (aspect > 1.0) uv.x *= aspect; else uv.y /= max(aspect, 1e-4);
-                uv = uv / max(_FootageScale, 1e-4) + 0.5;
-
-                // --- What is showing: the two heaviest clips, crossfaded ---
-                // The project is Linear + HDR, so this lerp is a linear-space blend.
-                // Weights are opacities only; no playhead is ever scrubbed.
-                float3 a = SAMPLE_TEXTURE2D(_TexA, sampler_TexA, uv).rgb;
-                float3 b = SAMPLE_TEXTURE2D(_TexB, sampler_TexB, uv).rgb;
-                float3 color = lerp(a, b, saturate(_Blend)) * _Brightness;
-
                 // --- Where it is showing: the proximity-driven window ---
-                // With _LoupeRadius at 0 (viewer far away, or tracking lost) the
-                // smoothstep saturates and reveal is 0 everywhere — the layer
-                // disappears completely and the coral is just the coral.
+                // Computed FIRST and clipped, so the six texture fetches below only
+                // happen inside the loupe. With _LoupeRadius at 0 (viewer far away, or
+                // tracking lost) the smoothstep saturates, reveal is 0 everywhere, and
+                // the whole layer costs a clip per fragment.
             #if defined(_LOUPE_ON)
                 float dLoupe = distance(IN.positionWS, _LoupeCenter.xyz);
                 float reveal = 1.0 - smoothstep(_LoupeRadius - _LoupeSoftness, _LoupeRadius, dLoupe);
             #else
                 float reveal = 1.0;
             #endif
+                clip(reveal - 0.002);
+
+                // --- Object-space triplanar projection ---
+                float3 p = IN.positionOS / max(_FootageScale, 1e-4);
+                float3 w = abs(normalize(IN.normalOS));
+                w = pow(w, _ProjectionSharpness);
+                w /= max(w.x + w.y + w.z, 1e-4);
+
+                // --- What is showing: the two heaviest clips, crossfaded ---
+                // The project is Linear + HDR, so this lerp is a linear-space blend.
+                // Weights are opacities only; no playhead is ever scrubbed.
+                float3 a = SampleTriplanar(TEXTURE2D_ARGS(_TexA, sampler_TexA), p, w);
+                float3 b = SampleTriplanar(TEXTURE2D_ARGS(_TexB, sampler_TexB), p, w);
+                float3 color = lerp(a, b, saturate(_Blend)) * _Brightness;
 
                 return half4(color, saturate(reveal * _Opacity));
             }

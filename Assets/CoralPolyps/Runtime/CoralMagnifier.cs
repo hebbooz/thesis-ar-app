@@ -63,7 +63,8 @@ namespace CoralPolyps
 
             // The seam: which implementation is a config edit, never a code change.
             // If flipping magnifier_source ever requires touching code, the seam was
-            // built wrong.
+            // built wrong. ("grid" is the placeholder in registration-test mode, which
+            // it detects for itself — see PlaceholderMagnifierSource.)
             if (_cfg.magnifier_source == "video")
                 _source = gameObject.AddComponent<VideoMagnifierSource>();
             else

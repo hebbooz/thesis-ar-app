@@ -75,9 +75,13 @@ namespace CoralPolyps
         public bool suppress_emission_during_recovery = true;
 
         // --- Magnifier (CONTROL_INTEGRATION.md §3.3) ---
-        /// <summary>"placeholder" or "video". The placeholder is a permanent
-        /// regression harness, not scaffolding — it keeps the magnifier testable on a
-        /// laptop with no footage and no device.</summary>
+        /// <summary>
+        /// "placeholder", "grid" or "video". The placeholder is a permanent regression
+        /// harness, not scaffolding — it keeps the magnifier testable on a laptop with
+        /// no footage and no device. "grid" is the same source showing one static test
+        /// pattern instead, which is how the object-space projection is checked: the
+        /// grid must stay stuck to the coral as the device moves.
+        /// </summary>
         public string magnifier_source = "placeholder";
         public MagnifierClips magnifier_clips = new MagnifierClips();
 

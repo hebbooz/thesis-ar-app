@@ -278,6 +278,21 @@ surface, not a fullscreen effect. Copy the *weight logic* from `ProjectionPlayer
 (`ChooseTargets` / `EaseWeights` / the pending-fire seek guard); write the
 composite yourself.
 
+**Sample the footage in OBJECT space, not screen space** (settled 2026-07-28, after a
+first pass got it wrong). Screen-space sampling maps a given corallite to different
+footage texels as the device moves, so the polyps slide across the coral — which
+violates `USER_STORIES.md` V4 ("polyps stay registered to the same cups from different
+angles") and inverts the metaphor: with a real magnifying glass the content is
+attached to the *object* and the glass moves over it. Not mesh UVs either — the scan's
+UVs were authored for the skeleton texture and smear the footage across the honeycomb.
+Object space is rigidly attached to the mesh, so it survives tracking updates for free
+and magnifies with the coral. Use **triplanar**: over a ~6 cm loupe on a ~10 cm dome a
+single plane visibly stretches on the flanks; a sharpness exponent collapses it back
+toward planar if that reads better. Verify with a static grid
+(`"magnifier_source": "grid"`) — the grid must stay stuck to the coral as the device
+moves. Compute the loupe mask first and `clip()`, so the triplanar fetches only cost
+anything inside the window.
+
 **iPad video budget.** Prepare all three `VideoPlayer`s at launch and leave them
 decoding — a `Prepare()` mid-transition stalls for hundreds of milliseconds and the
 blend visibly hitches. Three simultaneous decodes is the cost of never stalling; if

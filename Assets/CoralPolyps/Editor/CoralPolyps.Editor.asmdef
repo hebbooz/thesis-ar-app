@@ -2,7 +2,8 @@
     "name": "CoralPolyps.Editor",
     "rootNamespace": "CoralPolyps",
     "references": [
-        "CoralPolyps.Runtime"
+        "CoralPolyps.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [
         "Editor"

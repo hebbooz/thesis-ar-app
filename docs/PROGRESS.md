@@ -75,9 +75,11 @@ read "`Assets/Scenes/SampleScene.unity` — the coral GameObject is in it with t
 CoralTissue material applied". That is **not true of the committed tree**:
 
 - `Assets/Scenes/SampleScene.unity` is the **stock scene** — Main Camera, Directional
-  Light, Global Volume, nothing else. It has one commit ("first commit", 8 July) and
+  Light, Global Volume, nothing else. It has one commit ("first commit", 24 July) and
   has never contained the coral, the ModelTarget, or `ProximityRevealController`
-  (searched by script GUID across all history).
+  (searched by script GUID across all history). Independently re-verified: only one
+  `.unity` has ever been tracked, nothing was deleted from history, and there is no
+  `Temp/__Backupscenes` to recover from.
 - `ProjectSettings/EditorBuildSettings.asset` still lists
   `Assets/SamplesResources/Scenes/0-Main.unity`, and **that file no longer exists** —
   `Assets/SamplesResources/` has been deleted. So the build scene list points at
@@ -90,6 +92,27 @@ to lose when `CONTROL_INTEGRATION.md` §11 step 4 deleted the serialized fields 
 warning about that turned out to be moot here). Every *asset* it needs does still
 exist — mesh, `CoralTissue.mat` with its tuned look-dev values, textures, the
 `coral-rendering` Model Target database, the bake.
+
+**The rebuild is a script, not a checklist:** `Window > CoralPolyps > Rebuild AR Scene`
+(`Assets/CoralPolyps/Editor/SceneBuilder.cs`) constructs the whole scene — coral +
+material + collider, `ModelTarget` parenting, the magnifier layer, the four control
+components with their references wired, a directional light and a Bloom volume with
+post-processing enabled on the AR camera — saves it to `Assets/Scenes/CoralAR.unity`,
+and repoints `EditorBuildSettings` (which still listed the deleted `0-Main.unity`).
+**The root cause of the loss was wiring that existed only in the Editor**, so it must
+stay that way: if the scene changes structurally, change the builder and re-run it
+rather than hand-editing the scene. Two steps remain genuinely interactive and the
+script reports them: picking the Model Target's database/target, and
+`Add Target Representation` + `Align Coral To Model Target`.
+
+> **⚠️ FIRST COMMIT AFTER OPENING UNITY MUST INCLUDE THE NEW `.meta` FILES.** The ten
+> new `.cs`/`.shader` files were written outside the Editor and have no `.meta` yet.
+> Unity generates them on import with fresh GUIDs; if they are not committed, every
+> machine generates its own, and any scene or material referencing these scripts
+> breaks on the next clone or CI run — silently, as a missing-script placeholder.
+> Check `git status` for `Assets/CoralPolyps/**/*.meta` before the next commit, and
+> commit them **before** running `Rebuild AR Scene`, so the saved scene references
+> GUIDs that are already tracked.
 
 **Coral mesh:** `Assets/CoralPolyps/Coral/astraea_favistella.obj` — 100k tris,
 ~10 cm real scale, **Read/Write ON**, **Tangents = Calculate**.
@@ -306,13 +329,30 @@ not "works".
       `VideoMagnifierSource` + **`MagnifierLoupe.shader`** — §3.2's weights, the §3.3
       seam, and a URP-safe in-shader composite (**not** the projection player's
       `OnRenderImage`, which never fires under URP).
+- [x] **Footage projects in OBJECT space, triplanar** — not screen space (a first pass
+      used screen space; it was wrong). Screen-space sampling maps a given cup to
+      different footage texels as the device moves, so the content slides across the
+      coral — which breaks `USER_STORIES.md` V4 ("polyps stay registered to the same
+      cups from different angles") and inverts the metaphor: with a real magnifying
+      glass the content belongs to the object, not the glass. Object space rather than
+      mesh UVs because the scan's UVs were authored for the skeleton texture and would
+      smear; triplanar because a ~6 cm loupe on a ~10 cm dome turns far enough that one
+      plane visibly stretches on the flanks (`_ProjectionSharpness` collapses it back
+      toward planar if that reads better). `_FootageScale` is now a tile size in coral
+      metres — smaller = more magnified — and remains the tuning knob.
+- [x] **Grid registration test** — `"magnifier_source": "grid"` shows one static grid
+      with a red and a blue reference cell per repeat, identical across all three
+      states. Move the device: the grid must **stick to the coral**, not slide with the
+      screen. That is the check that the projection above is actually locked.
+- [x] **`SceneBuilder.cs`** — `Window > CoralPolyps > Rebuild AR Scene`.
 
 **Next, in order:**
-- [ ] **Rebuild the scene** (see the corrected _"Working scene"_ note above) and fix the
-      stale entry in `EditorBuildSettings`. New wiring beyond the old setup: a
-      `CoralOscListener` + `CoralHud` + `CoralAppearance`, and a duplicate coral mesh
-      carrying `MagnifierLoupe` assigned to both `CoralMagnifier.magnifierRenderer` and
-      `ProximityRevealController.loupeTargets`.
+- [ ] **Commit the generated `.meta` files** the moment Unity has imported the new
+      scripts (see the warning above) — before building the scene, so it references
+      tracked GUIDs.
+- [ ] **Run `Window > CoralPolyps > Rebuild AR Scene`**, then the two interactive Model
+      Target steps it reports. Review the resulting `CoralAR.unity` diff — it should be
+      readable, which is the point of building it from a script.
 - [ ] **§11 step 1 verification** — HUD tracks `tools/fake_client.py` value-for-value
       against `src/server.py` + `fake_rig.py`, hello registration appears in the server
       log, and the entry is pruned when the app backgrounds.
@@ -322,7 +362,10 @@ not "works".
 - [ ] **§11 steps 3+5 look-dev** — hold each state still with
       `drive_projection.py --state 0|1|2|3`; provoke both backward transitions (3→2, 2→1).
       Confirm the tissue and the loupe agree at every moment (§10's open item).
-- [ ] Tune `loupeStart/FullDistance`, `maxLoupeRadius` and `_FootageScale` on device.
+- [ ] **Verify the projection with `"magnifier_source": "grid"`** before tuning
+      anything else — if the grid slides, nothing downstream is worth judging.
+- [ ] Tune `loupeStart/FullDistance`, `maxLoupeRadius`, `_FootageScale` and
+      `_ProjectionSharpness` on device.
 - [ ] **§11 step 6** — full arc from the keyboard rig, then the three-device Phase 7
       acceptance test.
 - [ ] **§11 step 7** — footage lands: encode to §3.2's contract, flip `magnifier_source`

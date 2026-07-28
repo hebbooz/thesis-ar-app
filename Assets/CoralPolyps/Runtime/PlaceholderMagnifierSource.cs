@@ -10,6 +10,11 @@
 /// Permanent, not scaffolding. This is what lets the whole magnifier path — weights,
 /// slew, both backward transitions, the loupe mask — be verified on a laptop with no
 /// footage and no device.
+///
+/// GRID MODE (magnifier_source: "grid") replaces all three with one static grid, and
+/// is the registration test for the object-space projection: move the device around
+/// the coral and the grid must STICK TO THE CORAL, not slide across it with the
+/// screen. Identical on all three so a state change cannot disturb the reading.
 /// </summary>
 using UnityEngine;
 
@@ -19,22 +24,36 @@ namespace CoralPolyps
     {
         const int Size = 96;        // small on purpose: regenerated per frame on the CPU
         const int Blobs = 14;
+        const int GridCell = 12;    // Size / GridCell = 8 cells per repeat
 
         Texture2D _alive, _fluorescent, _dead;
         Color32[] _buffer;
+        bool _gridMode;
 
         public Texture Alive => _alive;
         public Texture Fluorescent => _fluorescent;
         public Texture Dead => _dead;
         public bool Ready => _alive != null;
-        public string SourceName => "placeholder";
+        public string SourceName => _gridMode ? "placeholder-grid" : "placeholder";
 
         void Awake()
         {
+            // Read the config directly: this component is added at runtime by
+            // CoralMagnifier, so there is no inspector pass in which to set a flag.
+            _gridMode = CoralConfig.Shared.magnifier_source == "grid";
+
             _buffer = new Color32[Size * Size];
             _alive = New();
             _fluorescent = New();
             _dead = New();
+
+            if (_gridMode)
+            {
+                DrawGrid(_alive);
+                DrawGrid(_fluorescent);
+                DrawGrid(_dead);
+                return;
+            }
 
             // Dead is drawn once and never again — the stillness is the point.
             Draw(_dead, new Color(0.10f, 0.11f, 0.12f), new Color(0.86f, 0.87f, 0.84f), 0f);
@@ -42,6 +61,8 @@ namespace CoralPolyps
 
         void Update()
         {
+            if (_gridMode) return;      // a moving grid would defeat the whole test
+
             float t = Time.time;
             // Deep teal water with bright green polyps: the "reef is alive" read.
             Draw(_alive, new Color(0.02f, 0.10f, 0.11f), new Color(0.20f, 0.95f, 0.45f), t);
@@ -52,12 +73,48 @@ namespace CoralPolyps
 
         static Texture2D New()
         {
-            var tex = new Texture2D(Size, Size, TextureFormat.RGBA32, false)
+            return new Texture2D(Size, Size, TextureFormat.RGBA32, false)
             {
-                wrapMode = TextureWrapMode.Clamp,
+                // Repeat, not Clamp: the shader projects this across the coral in object
+                // space, so anything outside one repeat must tile rather than smear the
+                // edge pixels into streaks.
+                wrapMode = TextureWrapMode.Repeat,
                 filterMode = FilterMode.Bilinear,
             };
-            return tex;
+        }
+
+        /// <summary>
+        /// Registration test pattern: bright cell borders on dark, with one RED and one
+        /// BLUE cell per repeat. The coloured cells are the actual instrument — if they
+        /// stay over the same corallites as the device moves, the projection is locked
+        /// to the object; if they drift, it is still following the screen. Two different
+        /// colours so a mirrored or rotated projection is visible too.
+        /// </summary>
+        void DrawGrid(Texture2D tex)
+        {
+            var dark = new Color32(10, 12, 14, 255);
+            var line = new Color32(210, 235, 255, 255);
+            var red = new Color32(230, 40, 40, 255);
+            var blue = new Color32(40, 90, 240, 255);
+
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                {
+                    int cx = x / GridCell, cy = y / GridCell;
+                    bool border = (x % GridCell == 0) || (y % GridCell == 0);
+
+                    Color32 c = dark;
+                    if (cx == 0 && cy == 0) c = red;
+                    else if (cx == 1 && cy == 0) c = blue;
+                    if (border) c = line;
+
+                    _buffer[y * Size + x] = c;
+                }
+            }
+
+            tex.SetPixels32(_buffer);
+            tex.Apply(false);
         }
 
         /// <summary>
