@@ -359,7 +359,7 @@ namespace CoralPolyps
         static void HideTargetRepresentations()
         {
             foreach (var go in UnityEngine.Object.FindObjectsByType<GameObject>(
-                         FindObjectsInactive.Include, FindObjectsSortMode.None))
+                         FindObjectsInactive.Include))
             {
                 if (!go.activeSelf) continue;
                 if (!go.name.EndsWith("Target Representation", System.StringComparison.Ordinal)) continue;

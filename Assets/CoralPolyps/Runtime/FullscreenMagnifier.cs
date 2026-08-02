@@ -63,7 +63,9 @@ namespace CoralPolyps
         void Awake()
         {
             _magnifier = GetComponent<CoralMagnifier>();
-            if (proximity == null) proximity = FindFirstObjectByType<ProximityRevealController>();
+            // FindAnyObjectByType, not FindFirstObjectByType: the latter is deprecated
+            // for relying on instance-ID ordering, and there is only ever one of these.
+            if (proximity == null) proximity = FindAnyObjectByType<ProximityRevealController>();
             if (proximity == null)
                 Debug.LogWarning($"[{nameof(FullscreenMagnifier)}] no ProximityRevealController — " +
                                  "the takeover will never open.", this);
