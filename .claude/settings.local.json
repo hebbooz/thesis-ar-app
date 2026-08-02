@@ -1,26 +1,25 @@
 {
   "permissions": {
     "allow": [
-      "Bash(set -e)",
-      "Bash(mkdir -p Assets/CoralPolyps/Runtime Assets/CoralPolyps/Editor)",
-      "Bash(git mv *)",
-      "Bash(mv CoralliteBaker.cs Assets/CoralPolyps/Editor/)",
-      "Bash(mv PolypPool.cs PolypScatterMap.cs FluorescentPolyp.shader ProximityRevealController.cs Assets/CoralPolyps/Runtime/)",
-      "Bash(ps -p 76694 -o pid,etime,%cpu,%mem,comm)",
+      "Bash(git *)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(ps *)",
+      "Bash(mkdir -p *)",
+      "Bash(mv *)",
+      "Bash(curl -s *)",
+      "Bash(python3 *)",
+      "Bash(\"/Applications/Unity Hub.app/Contents/MacOS/Unity Hub\" *)",
       "WebSearch",
       "WebFetch(domain:discussions.unity.com)",
       "Read(//Applications/Unity/Hub/Editor/**)",
-      "Bash(curl -s \"https://services.api.unity.com/unity/editor/release/v1/releases?version=6000.4&limit=25\")",
-      "Bash(python3 -m json.tool)",
-      "Read(//Applications/Unity Hub.app/Contents/MacOS/**)",
-      "Bash(\"/Applications/Unity Hub.app/Contents/MacOS/Unity Hub\" --help)",
-      "Bash(\"/Applications/Unity Hub.app/Contents/MacOS/Unity Hub\" -- --headless help)",
-      "Read(//Users/HeberdenN21/Documents/2026 University/Thesis/code/tools/**)",
-      "Bash(curl -s \"https://api.github.com/repos/Iam1337/extOSC/contents/package.json\")",
-      "Bash(curl -s \"https://api.github.com/repos/Iam1337/extOSC/releases/latest\")",
-      "Bash(curl -s \"https://api.github.com/repos/Iam1337/extOSC/tags\")",
-      "Bash(curl -s \"https://api.github.com/repos/Iam1337/extOSC/contents/\")",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('tag',d['tag_name']\\); print\\('assets',[a['name'] for a in d.get\\('assets',[]\\)]\\)\")"
+      "Read(//Applications/Unity Hub.app/Contents/MacOS/**)"
+    ],
+    "additionalDirectories": [
+      "/Applications/Unity/Hub/Editor",
+      "/Users/HeberdenN21/Documents/2026 University/Thesis/code/tools",
+      "/Users/HeberdenN21/Documents/2026 University/Thesis/micro-scale/builds"
     ]
   }
 }

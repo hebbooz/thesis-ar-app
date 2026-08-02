@@ -1,0 +1,143 @@
+Shader "CoralPolyps/MagnifierFullscreen"
+{
+    // The takeover layer: at closest range the footage leaves the coral and fills the
+    // screen. Drawn as a single full-screen UI quad by FullscreenMagnifier.
+    //
+    // Three jobs in one pass:
+    //   * WHAT   <- CoralMagnifier's _TexA / _TexB / _Blend, the same pair the loupe
+    //               shows, so the two layers can never disagree mid-handover.
+    //   * WHERE  <- an iris centred on _Center (viewport coords), opening as _Radius
+    //               grows. _Center tracks a corallite, so the video appears to come
+    //               UP OUT OF a specific crater rather than fading in over everything.
+    //   * FIT    <- cover-fit UVs from _ScreenAspect / _FootageAspect: fill the screen,
+    //               crop the overflow, never distort and never letterbox.
+    //
+    // WHY AN IRIS RATHER THAN A CROSSFADE. A crossfade says "here is a video now".
+    // An iris opening from a cup says "this is what is inside that cup" — the same
+    // claim the whole piece makes, that the micro-scale is present in the object and
+    // not an illustration beside it. It also hides the moment Vuforia drops tracking:
+    // by the time the iris covers the screen there is no registration left to lose.
+    Properties
+    {
+        _TexA ("Clip A (heaviest)", 2D) = "black" {}
+        _TexB ("Clip B (second)", 2D) = "black" {}
+        _Blend ("A -> B blend", Range(0, 1)) = 0
+
+        _Center ("Iris centre (viewport xy)", Vector) = (0.5, 0.5, 0, 0)
+        _Radius ("Iris radius (screen heights)", Float) = 0
+        _Feather ("Iris edge softness", Range(0.0001, 0.5)) = 0.08
+
+        // 0 = footage fitted to the iris (crater scale), 1 = cover-fitted to the
+        // screen (100%). Driven by FullscreenMagnifier from coverage; the migration
+        // between the two is the emergence movement itself.
+        _Settle ("Crater fit -> screen fit", Range(0, 1)) = 0
+
+        _ScreenAspect ("Screen w/h", Float) = 0.462
+        _FootageAspect ("Footage w/h", Float) = 0.5625
+        _Opacity ("Master opacity", Range(0, 1)) = 1
+    }
+
+    SubShader
+    {
+        Tags { "RenderType"="Transparent" "RenderPipeline"="UniversalPipeline" "Queue"="Overlay" }
+        LOD 100
+
+        Pass
+        {
+            Name "MagnifierFullscreen"
+            Blend SrcAlpha OneMinusSrcAlpha
+            ZWrite Off
+            ZTest Always
+            Cull Off
+
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; float4 color : COLOR; };
+            struct Varyings   { float4 positionHCS : SV_POSITION; float2 uv : TEXCOORD0; float4 color : COLOR; };
+
+            TEXTURE2D(_TexA); SAMPLER(sampler_TexA);
+            TEXTURE2D(_TexB); SAMPLER(sampler_TexB);
+
+            CBUFFER_START(UnityPerMaterial)
+                float  _Blend;
+                float4 _Center;
+                float  _Radius;
+                float  _Feather;
+                float  _Settle;
+                float  _ScreenAspect;
+                float  _FootageAspect;
+                float  _Opacity;
+            CBUFFER_END
+
+            Varyings vert(Attributes IN)
+            {
+                Varyings OUT;
+                OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
+                OUT.uv = IN.uv;
+                OUT.color = IN.color;
+                return OUT;
+            }
+
+            half4 frag(Varyings IN) : SV_Target
+            {
+                // --- The iris. Measured in screen HEIGHTS with the x axis corrected by
+                // the screen aspect, so it is a circle on any device rather than an
+                // ellipse on tall ones.
+                float2 d = (IN.uv - _Center.xy) * float2(_ScreenAspect, 1.0);
+                float r = length(d);
+                float iris = 1.0 - smoothstep(max(_Radius - _Feather, 0.0), _Radius, r);
+
+                float alpha = iris * _Opacity * IN.color.a;
+                if (alpha <= 0.001) discard;   // outside the iris: the AR view shows through
+
+                // --- TWO MAPPINGS, AND THE JOURNEY BETWEEN THEM IS THE MOVEMENT.
+                //
+                // Mapping A — fitted to the IRIS. The clip's width spans the opening, so
+                // at emergence the clip's corallite is drawn at the same physical size as
+                // the skeleton's own cups and the rim is not a scale seam. This is what
+                // makes the opening read as a lens finding a cup.
+                //
+                // Mapping B — cover-fitted to the SCREEN. The clip at 100%, filling the
+                // frame edge to edge, overflow cropped, no bars, no distortion. This is
+                // the destination: a full screen of polyps at native scale.
+                //
+                // _Settle carries the footage from A to B as the iris opens. That
+                // migration is not a blend trick — it is what makes the polyps EMERGE
+                // WITH MOVEMENT: every texel travels radially outward from the crater as
+                // the mapping relaxes, so the content visibly grows out of the cup
+                // toward the viewer instead of being a disc that merely gets bigger.
+                // Played backwards on the way out, the footage funnels back INTO the
+                // crater, which is the exit reading as the same lens withdrawing.
+                float2 uvI;
+                uvI.x = d.x / max(2.0 * _Radius, 1e-4);
+                uvI.y = d.y * _FootageAspect / max(2.0 * _Radius, 1e-4);
+                uvI += 0.5;
+
+                float2 uvS = IN.uv;
+                if (_FootageAspect > _ScreenAspect)
+                {
+                    // Footage relatively wider: match heights, crop the sides.
+                    float s = _ScreenAspect / max(_FootageAspect, 1e-4);
+                    uvS.x = (uvS.x - 0.5) * s + 0.5;
+                }
+                else
+                {
+                    // Footage relatively taller: match widths, crop top and bottom.
+                    float s = _FootageAspect / max(_ScreenAspect, 1e-4);
+                    uvS.y = (uvS.y - 0.5) * s + 0.5;
+                }
+
+                float2 fuv = lerp(uvI, uvS, saturate(_Settle));
+
+                float3 a = SAMPLE_TEXTURE2D(_TexA, sampler_TexA, fuv).rgb;
+                float3 b = SAMPLE_TEXTURE2D(_TexB, sampler_TexB, fuv).rgb;
+                return half4(lerp(a, b, saturate(_Blend)), alpha);
+            }
+            ENDHLSL
+        }
+    }
+    FallBack Off
+}

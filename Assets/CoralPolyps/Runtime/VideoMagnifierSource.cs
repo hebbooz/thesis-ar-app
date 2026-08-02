@@ -27,6 +27,14 @@ namespace CoralPolyps
     public class VideoMagnifierSource : MonoBehaviour, IMagnifierSource
     {
         RenderTexture _rtAlive, _rtFluorescent, _rtDead;
+        readonly System.Collections.Generic.List<VideoPlayer> _players =
+            new System.Collections.Generic.List<VideoPlayer>();
+
+        // Watchdog budget. Generous enough to cover a slow prepare on a cold app start,
+        // bounded so a genuinely broken clip cannot turn into an endless Play() storm.
+        const float NudgeIntervalS = 0.5f;
+        int _nudgesLeft = 6;
+        float _sinceNudge;
 
         public Texture Alive => _rtAlive;
         public Texture Fluorescent => _rtFluorescent;
@@ -44,7 +52,22 @@ namespace CoralPolyps
 
         void Create(string fileName, System.Action<RenderTexture> assign)
         {
-            var vp = gameObject.AddComponent<VideoPlayer>();
+            // ONE CHILD GAMEOBJECT PER CLIP — not three VideoPlayers on this one.
+            //
+            // Unity is unreliable about several VideoPlayer components sharing a
+            // GameObject: they prepare, they render a first frame, and then they
+            // stomp on each other and none of them advance. The symptom is exactly
+            // the one that is hardest to attribute — the magnifier shows a correct
+            // but FROZEN frame per state, so the footage looks like a set of stills
+            // and every other explanation (decode budget, RenderTexture, loop seams)
+            // gets investigated first.
+            //
+            // The projection player learned this and gives each layer its own child.
+            // A child costs nothing. Do not fold these back onto one object.
+            var host = new GameObject($"Clip_{Path.GetFileNameWithoutExtension(fileName)}");
+            host.transform.SetParent(transform, false);
+
+            var vp = host.AddComponent<VideoPlayer>();
             vp.source = VideoSource.Url;
             vp.url = Path.Combine(Application.streamingAssetsPath, fileName);
             vp.renderMode = VideoRenderMode.RenderTexture;
@@ -79,6 +102,44 @@ namespace CoralPolyps
             };
 
             vp.Prepare();
+            _players.Add(vp);
+        }
+
+        /// <summary>
+        /// Keep every prepared clip running. Play() issued from prepareCompleted is
+        /// occasionally swallowed on iOS — the callback arrives before the player will
+        /// accept the command, and it stays parked on frame 0 forever with no error.
+        /// A frozen clip is indistinguishable from a still image, so this costs one
+        /// bool check per clip per frame and removes a whole class of silent failure.
+        ///
+        /// This does NOT violate the playhead invariant: it only ever starts playback
+        /// from wherever the head already is. Nothing seeks, nothing rewinds.
+        /// </summary>
+        void Update()
+        {
+            if (_nudgesLeft <= 0) return;
+
+            _sinceNudge += Time.unscaledDeltaTime;
+            if (_sinceNudge < NudgeIntervalS) return;
+            _sinceNudge = 0f;
+
+            bool nudged = false;
+            for (int i = 0; i < _players.Count; i++)
+            {
+                var vp = _players[i];
+                if (vp == null || !vp.isPrepared || vp.isPlaying) continue;
+                vp.Play();
+                nudged = true;
+            }
+
+            // Spend an attempt only when something actually needed one, and stop after a
+            // few. Hammering Play() every frame at three AVFoundation players that are
+            // refusing to start is not a retry — it is a denial-of-service against the
+            // system video stack, and it will take the app down rather than fix a clip.
+            if (nudged && --_nudgesLeft == 0)
+                Debug.LogWarning("[magnifier] gave up nudging stalled clips — check the " +
+                                 "prepared logs above; a clip that never plays is a decode " +
+                                 "problem, not a timing one.");
         }
 
         void OnDestroy()

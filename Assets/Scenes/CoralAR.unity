@@ -859,6 +859,7 @@ MonoBehaviour:
   listener: {fileID: 1286615207}
   appearance: {fileID: 1286615206}
   magnifier: {fileID: 1286615205}
+  proximity: {fileID: 0}
   visible: 1
 --- !u!114 &1286615205
 MonoBehaviour:
@@ -935,6 +936,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: CoralPolyps.Runtime::CoralPolyps.FullscreenMagnifier
   proximity: {fileID: 0}
+  fullscreenShader: {fileID: 4800000, guid: b5a450959aa1d444aa079821439f947e, type: 3}
+  irisEdgeSoftness: 0.22
+  irisWorldRadiusStart: 0.004
+  irisWorldRadiusEnd: 0.04
+  settleStartCoverage: 0.75
+  coralEdgeMargin: 0.9
+  clampReleaseCoverage: 0.8
   sortingOrder: 100
 --- !u!1 &1390904431
 GameObject:
@@ -1283,8 +1291,8 @@ MonoBehaviour:
   magnifyAnchor: 1
   loupeTargets:
   - {fileID: 1274010843}
-  loupeStartDistance: 0.3
-  loupeFullDistance: 0.08
+  loupeStartDistance: 0.2
+  loupeFullDistance: 0.12
   maxLoupeRadius: 0.03
   loupeCurve:
     serializedVersion: 2
@@ -1310,8 +1318,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  fullscreenStartDistance: 0.07
-  fullscreenFullDistance: 0.03
+  fullscreenStartDistance: 0.045
+  fullscreenFullDistance: 0.02
   fullscreenCurve:
     serializedVersion: 2
     m_Curve:
@@ -1336,8 +1344,24 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  takeoverLatchThreshold: 0.6
+  takeoverHoldMaxS: 8
+  takeoverReleaseS: 1
+  implausibleFarM: 3
+  implausibleJumpM: 0.15
+  poseRecoverS: 0.4
+  enterDwellS: 0.25
+  microExitDistance: 0.12
+  exitDwellS: 1
+  minStateS: 1
+  refractoryS: 1.5
+  logStateChanges: 1
+  relockStableS: 0.75
+  relockJitterM: 0.008
+  relockMaxWaitS: 3
+  fullscreen: {fileID: 0}
   measureFromSurface: 1
-  distanceSmoothTime: 0.12
+  distanceSmoothTime: 0.791
   configureMaterialForAR: 1
   useManualDistance: 0
   manualDistance: 1

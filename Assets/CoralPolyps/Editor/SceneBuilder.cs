@@ -55,6 +55,7 @@ namespace CoralPolyps
         const string MagnifierMaterialPath = "Assets/CoralPolyps/Coral/MagnifierLoupe.mat";
         const string BloomProfilePath = "Assets/CoralPolyps/CoralBloomProfile.asset";
         const string MagnifierShader = "CoralPolyps/MagnifierLoupe";
+        const string FullscreenShaderPath = "Assets/CoralPolyps/Runtime/MagnifierFullscreen.shader";
 
         static readonly List<string> _manual = new List<string>();
 
@@ -318,6 +319,15 @@ namespace CoralPolyps
             // footage at the same blend. Builds its own overlay canvas at runtime.
             var fullscreen = control.AddComponent<FullscreenMagnifier>();
 
+            // Assign the shader as a hard reference, not by name. Shader.Find works in
+            // the Editor and then returns null in a player build, because a shader
+            // nothing references is stripped — so the takeover would test fine and be
+            // silently absent on device, which is exactly how it was first missed.
+            var fsShader = AssetDatabase.LoadAssetAtPath<Shader>(FullscreenShaderPath);
+            if (fsShader != null) fullscreen.fullscreenShader = fsShader;
+            else _manual.Add($"{FullscreenShaderPath} not found — assign Fullscreen Shader " +
+                             "on CoralControl by hand, or the takeover will be stripped from the build.");
+
             var hud = control.AddComponent<CoralHud>();
             hud.listener = listener;
             hud.appearance = appearance;
@@ -340,6 +350,8 @@ namespace CoralPolyps
             proximity.maxMagnification = 1f;
 
             fullscreen.proximity = proximity;
+            proximity.fullscreen = fullscreen;   // so the coral is hidden on REAL coverage
+            hud.proximity = proximity;
         }
 
         /// <summary>

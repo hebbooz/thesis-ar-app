@@ -59,6 +59,7 @@ namespace CoralPolyps
         static readonly int TexAID = Shader.PropertyToID("_TexA");
         static readonly int TexBID = Shader.PropertyToID("_TexB");
         static readonly int BlendID = Shader.PropertyToID("_Blend");
+        static readonly int FootageAspectID = Shader.PropertyToID("_FootageAspect");
 
         CoralConfig _cfg;
         IMagnifierSource _source;
@@ -184,6 +185,13 @@ namespace CoralPolyps
             _mat.SetTexture(TexAID, ClipA);
             _mat.SetTexture(TexBID, ClipB);
             _mat.SetFloat(BlendID, Blend);
+
+            // Read the shape off the clip rather than stating it in config: a re-encode
+            // at a different aspect then needs no material edit and cannot silently
+            // disagree with the footage. All three clips are the same shape by contract
+            // (§3.3, "identical framing/scale"), so either texture answers for both.
+            if (ClipA != null && ClipA.height > 0)
+                _mat.SetFloat(FootageAspectID, (float)ClipA.width / ClipA.height);
         }
     }
 }

@@ -33,9 +33,19 @@ namespace CoralPolyps
         [Tooltip("The magnifier layer, for the APPLIED half of the readout. Optional.")]
         public CoralMagnifier magnifier;
 
+        [Tooltip("The magnification state machine, for the transition diagnostics block. " +
+                 "Found in the scene if left empty.")]
+        public ProximityRevealController proximity;
+
         [Tooltip("Visible on launch. Toggle any time with a three-finger tap (or H in the editor). " +
                  "Set hud_enabled:false in coral-ar.json to disable it entirely for the exhibition.")]
         public bool visible = true;
+
+        [Tooltip("Show the editable server-host row. Off by default — it is a wide input " +
+                 "box that swamps the overlay, and the address is already on the id line. " +
+                 "Turn it on for the exhibition, when correcting the IP on the day matters " +
+                 "more than a clean view.")]
+        public bool showHostEditor = false;
 
         string _hostEdit;
         bool _hostEditPrimed;
@@ -46,6 +56,7 @@ namespace CoralPolyps
             if (listener == null) listener = FindFirstObjectByType<CoralOscListener>();
             if (appearance == null) appearance = FindFirstObjectByType<CoralAppearance>();
             if (magnifier == null) magnifier = FindFirstObjectByType<CoralMagnifier>();
+            if (proximity == null) proximity = FindAnyObjectByType<ProximityRevealController>();
             if (!CoralConfig.Shared.hud_enabled) enabled = false;
         }
 
@@ -88,6 +99,18 @@ namespace CoralPolyps
                 string applied = AppliedLine();
                 if (applied != null) GUILayout.Label(applied, _label);
 
+                // --- Magnification diagnostics (Phase 1 of the black-box fix) ---
+                // The acceptance criteria are read straight off these two lines during a
+                // screen recording: a 60 s close hold must show zero state changes here.
+                if (proximity != null)
+                {
+                    var prevMag = GUI.color;
+                    GUI.color = MagnifyColor();
+                    GUILayout.Label(MagnifyLine(), _label);
+                    GUILayout.Label(MagnifyTimersLine(), _label);
+                    GUI.color = prevMag;
+                }
+
                 var prev = GUI.color;
                 GUI.color = StatusColor();
                 GUILayout.Label($"last broadcast {Age(listener.SecondsSinceMessage)}   " +
@@ -97,6 +120,11 @@ namespace CoralPolyps
                 GUILayout.Label($"config: {cfg.LoadedFrom}", _label);
 
                 // --- Runtime server address, for the morning the Mac's IP has moved ---
+                // Off by default: it is a wide input row that dominates the overlay while
+                // judging the magnifier, and the address is already shown on the id line
+                // above. Tick showHostEditor when you actually need to change it.
+                if (!showHostEditor) { GUILayout.EndVertical(); GUILayout.EndArea(); return; }
+
                 if (!_hostEditPrimed) { _hostEdit = cfg.server_host; _hostEditPrimed = true; }
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("server host", _label, GUILayout.Width(140f * Scale));
@@ -132,6 +160,55 @@ namespace CoralPolyps
                 : $"magnifier=-   src={CoralConfig.Shared.magnifier_source}";
 
             return $"{stress}   {mag}";
+        }
+
+        /// <summary>
+        /// The state machine's whole dashboard: state + age, m, filtered and raw distance,
+        /// pose trust. "lost" for an infinite distance (target dropped), FROZEN while the
+        /// takeover is holding against an untrusted pose.
+        /// </summary>
+        string MagnifyLine()
+        {
+            string d = float.IsInfinity(proximity.SmoothedDistanceM)
+                ? "lost" : $"{proximity.SmoothedDistanceM:F3}";
+            string raw = float.IsInfinity(proximity.RawDistanceM)
+                ? "-" : $"{proximity.RawDistanceM:F3}";
+            return $"magnify: {proximity.State} {proximity.StateAgeS:F1}s   " +
+                   $"m={proximity.FullscreenReveal:F2}   d={d} (raw {raw})   " +
+                   $"pose {(proximity.LastPosePlausible ? "ok" : "BAD")} {proximity.PoseTrustS:F1}s" +
+                   (proximity.TakeoverHeld ? "   FROZEN" : "") +
+                   (proximity.RelockWaitS > 0f ? $"   WAIT-LOCK {proximity.RelockWaitS:F1}s" : "");
+        }
+
+        string MagnifyTimersLine() =>
+            $"cover {(proximity.fullscreen != null ? proximity.fullscreen.ScreenCoverage01 : -1f):F2} " +
+            $"{(proximity.fullscreen != null && proximity.fullscreen.ScreenFullyCovered ? "FULL" : "partial")}   " +
+            $"enter {proximity.EnterDwellProgressS:F2}s   " +
+            $"exit {proximity.ExitDwellProgressS:F2}s   " +
+            $"refractory {proximity.MicroRefractoryS:F1}s   " +
+            $"lock {(proximity.PoseLocked ? "OK" : $"{proximity.LockStableS:F2}s")} " +
+            $"({(proximity.VuforiaTracked ? "trk" : "EXT")})   " +
+            $"loupe {proximity.LoupeRadius * 1000f:F0}mm   x{proximity.Magnification:F1}";
+
+        /// <summary>
+        /// White in MESO, green through the blend, blue at full MICRO — and amber the
+        /// moment the pose is distrusted or the takeover freezes, so a recording shows
+        /// exactly when the gates engaged.
+        /// </summary>
+        Color MagnifyColor()
+        {
+            if (proximity.TakeoverHeld || !proximity.LastPosePlausible)
+                return new Color(1f, 0.8f, 0.3f);
+            switch (proximity.State)
+            {
+                case ProximityRevealController.MagState.Micro:
+                    return new Color(0.6f, 0.85f, 1f);
+                case ProximityRevealController.MagState.Blending:
+                case ProximityRevealController.MagState.Retreat:
+                    return new Color(0.8f, 1f, 0.8f);
+                default:
+                    return Color.white;
+            }
         }
 
         /// <summary>

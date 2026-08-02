@@ -65,6 +65,10 @@ Shader "CoralPolyps/MagnifierLoupe"
         // 1 = smooth triplanar blend; high = effectively planar on the dominant axis.
         _ProjectionSharpness ("Planar-ness (high = single plane)", Range(1, 16)) = 4
 
+        // Clip width/height. Set from the actual texture by CoralMagnifier, so a
+        // re-encode at a different shape needs no material edit. 1 = square.
+        _FootageAspect ("Footage aspect (w/h)", Float) = 1
+
         [Header(Loupe Reveal (driven by ProximityRevealController))]
         [Toggle(_LOUPE_ON)] _LoupeOn ("Loupe reveal enabled", Float) = 1
         _LoupeCenter ("Loupe centre (world, runtime-driven)", Vector) = (0,0,0,0)
@@ -119,6 +123,7 @@ Shader "CoralPolyps/MagnifierLoupe"
                 float  _Opacity;
                 float  _FootageScale;
                 float  _ProjectionSharpness;
+                float  _FootageAspect;
                 float4 _LoupeCenter;
                 float  _LoupeRadius;
                 float  _LoupeSoftness;
@@ -136,11 +141,22 @@ Shader "CoralPolyps/MagnifierLoupe"
             }
 
             // Triplanar sample of one clip, weighted by the object-space normal.
-            float3 SampleTriplanar(TEXTURE2D_PARAM(tex, samp), float3 p, float3 w)
+            //
+            // _FootageAspect (width/height) stretches the FIRST uv axis so a
+            // non-square clip lands on the coral undistorted. _FootageScale stays a
+            // tile size in metres along the SECOND axis (height); the first axis
+            // covers _FootageScale * aspect metres. With square footage the aspect is
+            // 1 and this is exactly the old behaviour.
+            //
+            // Without it, portrait 720x1280 footage is squeezed to a square tile and
+            // every polyp reads ~78% too wide — which looks like a bad render rather
+            // than a projection bug, so it is worth stating plainly.
+            float3 SampleTriplanar(TEXTURE2D_PARAM(tex, samp), float3 p, float3 w, float aspect)
             {
-                float3 x = SAMPLE_TEXTURE2D(tex, samp, p.zy).rgb;
-                float3 y = SAMPLE_TEXTURE2D(tex, samp, p.xz).rgb;
-                float3 z = SAMPLE_TEXTURE2D(tex, samp, p.xy).rgb;
+                float inv = 1.0 / max(aspect, 1e-4);
+                float3 x = SAMPLE_TEXTURE2D(tex, samp, float2(p.z * inv, p.y)).rgb;
+                float3 y = SAMPLE_TEXTURE2D(tex, samp, float2(p.x * inv, p.z)).rgb;
+                float3 z = SAMPLE_TEXTURE2D(tex, samp, float2(p.x * inv, p.y)).rgb;
                 return x * w.x + y * w.y + z * w.z;
             }
 
@@ -168,8 +184,8 @@ Shader "CoralPolyps/MagnifierLoupe"
                 // --- What is showing: the two heaviest clips, crossfaded ---
                 // The project is Linear + HDR, so this lerp is a linear-space blend.
                 // Weights are opacities only; no playhead is ever scrubbed.
-                float3 a = SampleTriplanar(TEXTURE2D_ARGS(_TexA, sampler_TexA), p, w);
-                float3 b = SampleTriplanar(TEXTURE2D_ARGS(_TexB, sampler_TexB), p, w);
+                float3 a = SampleTriplanar(TEXTURE2D_ARGS(_TexA, sampler_TexA), p, w, _FootageAspect);
+                float3 b = SampleTriplanar(TEXTURE2D_ARGS(_TexB, sampler_TexB), p, w, _FootageAspect);
                 float3 color = lerp(a, b, saturate(_Blend)) * _Brightness;
 
                 return half4(color, saturate(reveal * _Opacity));

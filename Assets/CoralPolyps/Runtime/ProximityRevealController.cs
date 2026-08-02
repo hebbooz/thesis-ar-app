@@ -116,6 +116,102 @@ namespace CoralPolyps
         [Tooltip("Shapes proximity (0 at start, 1 at full) -> screen coverage.")]
         public AnimationCurve fullscreenCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
+        [Header("Takeover latch (survives tracking loss)")]
+        [Tooltip("Once FullscreenReveal is at least this, losing the target HOLDS the takeover " +
+                 "instead of collapsing it. Vuforia drops a 10 cm target around 5 cm, which is " +
+                 "exactly where the iris should be total — without this the polyps strobe at " +
+                 "the closest range. Below it, tracking loss closes normally.")]
+        [Range(0f, 1f)] public float takeoverLatchThreshold = 0.6f;
+
+        [Tooltip("How long to hold the frozen takeover with no re-acquire before releasing. " +
+                 "Covers leaning in past tracking range; long enough that a visitor exploring " +
+                 "up close is never interrupted, short enough that walking away recovers.")]
+        public float takeoverHoldMaxS = 8f;
+
+        [Tooltip("Seconds to fade the held takeover out once the hold expires.")]
+        public float takeoverReleaseS = 1.0f;
+
+        [Header("Pose sanity (Vuforia reports 'found' with garbage transforms up close)")]
+        [Tooltip("Distance beyond which a reported pose is not believed, in metres.")]
+        public float implausibleFarM = 3.0f;
+
+        [Tooltip("Largest believable change in measured distance between two frames, in metres. " +
+                 "A hand cannot move this fast; a lost pose can.")]
+        public float implausibleJumpM = 0.15f;
+
+        [Tooltip("How long the pose must stay believable before the takeover trusts it and " +
+                 "starts easing out. Vuforia reports a plausible pose before the mesh is " +
+                 "actually locked back onto the print, so releasing on the first good frame " +
+                 "uncovers a coral that is still floating.")]
+        public float poseRecoverS = 0.4f;
+
+        // ----------------------------------------------------- state machine (Phase 1)
+        //
+        // From the black-box evaluation: the observed behaviour was ~45 unintended state
+        // changes in ten seconds at close range. The continuous reveal below is unchanged;
+        // what this adds is an explicit MESO -> BLENDING -> MICRO -> RETREAT machine whose
+        // only outputs are GATES — a transition must now be EARNED with sustained evidence,
+        // while mid-blend motion stays 1:1 with the hand. Acceptance: a 60 s close hold
+        // produces ZERO unintended transitions (read them off the HUD or the log).
+        public enum MagState { Meso, Blending, Micro, Retreat }
+
+        [Header("Magnification state machine (gates only — visuals unchanged)")]
+        [Tooltip("d must stay under fullscreenStartDistance for this long before BLENDING may " +
+                 "begin. One close frame — real or a pose spike — no longer starts anything.")]
+        public float enterDwellS = 0.25f;
+
+        [Tooltip("Hysteresis: leaving MICRO requires d beyond THIS distance, not merely beyond " +
+                 "fullscreenStartDistance. Must exceed it — the gap is what kills oscillation " +
+                 "at the boundary.")]
+        public float microExitDistance = 0.12f;
+
+        [Tooltip("d must stay beyond microExitDistance CONTINUOUSLY for this long to leave " +
+                 "MICRO. Any dip resets the timer to zero — a noisy frame cannot un-commit " +
+                 "the view, and neither can tracking loss (a lost target accrues nothing).")]
+        public float exitDwellS = 1.0f;
+
+        [Tooltip("Minimum seconds in any state before the next transition is allowed.")]
+        public float minStateS = 1.0f;
+
+        [Tooltip("After a completed exit (RETREAT reaching MESO), re-entry into MICRO is " +
+                 "blocked this long. BLENDING stays available throughout, so the reveal still " +
+                 "tracks the hand 1:1 — only the full-cover commit is debounced.")]
+        public float refractoryS = 1.5f;
+
+        [Tooltip("Log every state change with d and m — this is the flicker evidence for the " +
+                 "acceptance test, and thesis data.")]
+        public bool logStateChanges = true;
+
+        [Header("Re-lock confidence — the exit door out of MICRO")]
+        // Leaving the footage is the single worst moment to be wrong: uncovering onto a
+        // meso mesh that is floating off the print breaks the entire magnifying-glass
+        // fiction in one frame. So the distance vote alone no longer opens the door —
+        // the footage HOLDS at full cover until the pose is genuinely re-locked:
+        //   1. Vuforia itself reports TRACKED (not EXTENDED_TRACKED, which is dead
+        //      reckoning — the mesh can sit centimetres off the print under it), and
+        //   2. the measured distance has been steady, frame over frame, for a sustained
+        //      window. A hand retreating moves ~1-2 mm/frame; a re-solving pose jumps
+        //      far more. Steadiness is what separates "locked on" from "still hunting".
+        [Tooltip("The measured pose must be continuously plausible AND steady for this long " +
+                 "before the meso layer is trusted to be sitting on the print again.")]
+        public float relockStableS = 0.75f;
+
+        [Tooltip("Frame-to-frame change in measured distance above this (metres) counts as " +
+                 "the pose still hunting, and resets the steadiness clock. 0.008 tolerates " +
+                 "any human retreat speed while rejecting re-solve jumps.")]
+        public float relockJitterM = 0.008f;
+
+        [Tooltip("Fail-soft: if the exit is voted but a lock never arrives within this long, " +
+                 "retreat anyway — a visitor must never be trapped inside the footage by a " +
+                 "target that refuses to re-acquire.")]
+        public float relockMaxWaitS = 3f;
+
+        [Tooltip("The takeover layer, asked whether the screen is ACTUALLY covered before " +
+                 "the coral is ever hidden. Found in the scene if left empty; without it " +
+                 "the controller falls back to the distance-derived reveal, which " +
+                 "over-reports coverage whenever the coral does not fill the frame.")]
+        public FullscreenMagnifier fullscreen;
+
         [Header("Distance measurement")]
         [Tooltip("Measure to the coral's SURFACE rather than its hidden bounds centre, so the " +
                  "distances above mean the real gap between device and coral. With this off, a " +
@@ -124,8 +220,23 @@ namespace CoralPolyps
         public bool measureFromSurface = true;
 
         [Header("Smoothing")]
-        [Tooltip("SmoothDamp time (s) on the measured distance. Higher = calmer but laggier.")]
+        [Tooltip("LEGACY — no longer used. Distance is filtered by the One Euro parameters " +
+                 "below, which replaced SmoothDamp: one constant cannot be both steady at " +
+                 "rest and responsive in motion. Kept only so the serialised value in the " +
+                 "scene does not resolve as a missing field.")]
         [Range(0f, 1f)] public float distanceSmoothTime = 0.12f;
+
+        [Header("Distance filter (One Euro — adaptive)")]
+        [Tooltip("Cutoff in Hz at zero speed. LOWER = steadier when the phone is still, at " +
+                 "the cost of a little lag starting a move. 1.0 is a good middle.")]
+        public float euroMinCutoff = 1.0f;
+
+        [Tooltip("Speed coefficient. HIGHER = follows fast movement more tightly (less lag). " +
+                 "This is the knob for 'it feels delayed' — raise it.")]
+        public float euroBeta = 1.5f;
+
+        [Tooltip("Cutoff for the speed estimate itself. Rarely needs changing.")]
+        public float euroDerivCutoff = 1.0f;
 
         [Header("Material")]
         [Tooltip("On Start, put the coral's runtime material instance into AR mode: fully OPAQUE " +
@@ -156,8 +267,91 @@ namespace CoralPolyps
         /// </summary>
         public float FullscreenReveal { get; private set; }
 
+        /// <summary>
+        /// True while the takeover is being held open across a tracking dropout. The
+        /// fullscreen layer freezes its iris centre and radius when this is set: the
+        /// coral's transform is stale (or hidden) under tracking loss, so re-projecting
+        /// from it would swing the iris around the screen for exactly as long as the
+        /// dropout lasts — which is the flicker, arriving by a different route.
+        /// </summary>
+        public bool TakeoverHeld { get; private set; }
+
+        float _untrackedHold;
+        float _poseGoodFor;
+        float _lastGoodRaw = -1f;
+        float _prevRawForLock = float.PositiveInfinity;
+        Vuforia.ObserverBehaviour _observer;
+        readonly OneEuro _euro = new OneEuro();
+
+        // Last pose the coral was seen at while confidence was high. Re-applied while
+        // confidence is low, so the mesh holds still instead of chasing bad solves.
+        Vector3 _confidentPos;
+        Quaternion _confidentRot;
+        bool _haveConfidentPose;
+
+        /// <summary>
+        /// One Euro filter (Casiez et al. 2012). A first-order low-pass whose cutoff rises
+        /// with the signal's own speed: steady at rest, responsive in motion. Small enough
+        /// to keep here rather than pull in a dependency.
+        /// </summary>
+        sealed class OneEuro
+        {
+            float _x, _dx;
+            bool _primed;
+
+            public void Reset(float x) { _x = x; _dx = 0f; _primed = true; }
+
+            static float Alpha(float cutoff, float dt)
+            {
+                float tau = 1f / (2f * Mathf.PI * Mathf.Max(cutoff, 1e-4f));
+                return 1f / (1f + tau / Mathf.Max(dt, 1e-5f));
+            }
+
+            public float Filter(float x, float dt, float minCutoff, float beta, float dCutoff)
+            {
+                if (!_primed || dt <= 0f) { Reset(x); return x; }
+
+                float dxRaw = (x - _x) / Mathf.Max(dt, 1e-5f);
+                _dx = Mathf.Lerp(_dx, dxRaw, Alpha(dCutoff, dt));
+
+                // The adaptive part: faster movement -> higher cutoff -> less smoothing.
+                float cutoff = minCutoff + beta * Mathf.Abs(_dx);
+                _x = Mathf.Lerp(_x, x, Alpha(cutoff, dt));
+                return _x;
+            }
+        }
+        bool _takeoverLatched;
+        bool _coralHidden;
+        bool _loupeHeld { get => TakeoverHeld; set => TakeoverHeld = value; }
+
         /// <summary>Current magnification factor (1 = life-size).</summary>
         public float Magnification { get; private set; } = 1f;
+
+        // Diagnostics for CoralHud. The black-box evaluation was made from screen
+        // recordings, so the fix must be verifiable from the screen: every number the
+        // acceptance test needs is exposed here rather than buried in private state.
+        public MagState State { get; private set; } = MagState.Meso;
+        public float StateAgeS { get; private set; }
+        public float EnterDwellProgressS { get; private set; }
+        public float ExitDwellProgressS { get; private set; }
+        public float MicroRefractoryS { get; private set; }
+        public float RawDistanceM { get; private set; } = float.PositiveInfinity;
+        public float SmoothedDistanceM => _smoothedDistance;
+        public float PoseTrustS => _poseGoodFor;
+        public bool LastPosePlausible { get; private set; }
+
+        /// <summary>True when Vuforia reports genuinely TRACKED (not extended/dead-reckoned).
+        /// Defaults true when no observer is found, so the stability clock alone governs.</summary>
+        public bool VuforiaTracked { get; private set; } = true;
+
+        /// <summary>Seconds the measured pose has been continuously plausible and steady.</summary>
+        public float LockStableS { get; private set; }
+
+        /// <summary>Both conditions met: Vuforia TRACKED and steady for relockStableS.</summary>
+        public bool PoseLocked { get; private set; }
+
+        /// <summary>Seconds spent holding in MICRO after the exit vote, waiting for a lock.</summary>
+        public float RelockWaitS { get; private set; }
 
         // --- Shader property IDs ---
         private static readonly int LoupeCenterID = Shader.PropertyToID("_LoupeCenter");
@@ -179,7 +373,16 @@ namespace CoralPolyps
         private void Awake()
         {
             if (cam == null) cam = Camera.main;
+            if (fullscreen == null) fullscreen = FindAnyObjectByType<FullscreenMagnifier>();
         }
+
+        /// <summary>
+        /// Is every pixel genuinely footage right now? Asks the layer that actually drew
+        /// it. The distance-derived reveal is NOT an answer to this question — it ignores
+        /// the silhouette clamp, so it reads 1.0 while the rim is still transparent.
+        /// </summary>
+        private bool ScreenIsCovered =>
+            fullscreen != null ? fullscreen.ScreenFullyCovered : FullscreenReveal > 0.995f;
 
         private void Start()
         {
@@ -188,6 +391,15 @@ namespace CoralPolyps
             _baseLocalPos = _root.localPosition;
             _baseLocalScale = _root.localScale;
             _haveBase = true;
+
+            // Subscribe to the tracker's own verdict. The coral hangs under the Model
+            // Target, so its ObserverBehaviour is in the parents. EXTENDED_TRACKED is
+            // deliberately NOT counted as tracked: it is dead reckoning, and the mesh can
+            // sit centimetres off the print under it — the exact state the MICRO exit
+            // must not trust. No observer found (editor Play mode, manual rigs) leaves
+            // VuforiaTracked true and the steadiness clock solely in charge.
+            _observer = coralRenderer.GetComponentInParent<Vuforia.ObserverBehaviour>();
+            if (_observer != null) _observer.OnTargetStatusChanged += OnVuforiaStatus;
 
             if (configureMaterialForAR)
             {
@@ -234,10 +446,88 @@ namespace CoralPolyps
                 (!coralRenderer.enabled || !coralRenderer.gameObject.activeInHierarchy))
             {
                 if (magnifyEnabled) ResetToBase();
+
+                // Tracking is gone, so no credit accrues toward "the pose has been good
+                // for a while". Without this the timer keeps whatever it held when the
+                // target vanished, and the first frame back counts as fully recovered —
+                // which is precisely the premature release this whole path exists to stop.
+                _poseGoodFor = 0f;
+
+                // Forget the last distance too. Re-acquiring somewhere genuinely far from
+                // where we left off is normal; measuring that as an impossible jump would
+                // reject every frame and wedge the takeover open.
+                _lastGoodRaw = -1f;
+
+                // And the lock is gone with the target — steadiness cannot be measured
+                // blind, and pretending otherwise would let MICRO exit into nothing.
+                LockStableS = 0f;
+                PoseLocked = false;
+                _prevRawForLock = float.PositiveInfinity;
+
+                // THE TAKEOVER LATCHES THROUGH TRACKING LOSS.
+                //
+                // Vuforia gives up on a ~10 cm Model Target somewhere around 5 cm — which
+                // is precisely where the takeover is meant to be total. Collapsing it on
+                // target-lost produced the exact failure this guards against: lean all the
+                // way in and the polyps strobe in and out as tracking flickers, at the one
+                // moment the piece asks the viewer to commit.
+                //
+                // Once the iris is substantially open, registration has nothing left to
+                // do — the coral is off-screen behind a full frame of footage, so there is
+                // nothing for the viewer to notice being unregistered. Hold it.
+                //
+                // Below the threshold it still closes immediately: losing the target at
+                // arm's length must not strand a half-open iris in mid-air.
+                if (FullscreenReveal >= takeoverLatchThreshold)
+                {
+                    _untrackedHold += Time.deltaTime;
+                    if (_untrackedHold <= takeoverHoldMaxS)
+                    {
+                        // Freeze — do not recompute from a stale coral transform.
+                        _loupeHeld = true;
+                        LoupeRadius = 0f;
+                        PushLoupe();
+                        _smoothedDistance = Mathf.Infinity;
+                        return;
+                    }
+                    // Held long enough with no re-acquire: the visitor has walked away
+                    // rather than leaned in. Release rather than leaving a phone stuck
+                    // showing fullscreen polyps forever.
+                    FullscreenReveal = Mathf.MoveTowards(
+                        FullscreenReveal, 0f, Time.deltaTime / Mathf.Max(takeoverReleaseS, 0.01f));
+                    _loupeHeld = FullscreenReveal > 0.0001f;
+                    // The fade completing IS an exit — record it, and pay the refractory,
+                    // or the state label would still say MICRO over an empty screen.
+                    if (!_loupeHeld && State != MagState.Meso)
+                        ChangeState(MagState.Meso, float.PositiveInfinity, refractoryS);
+                    LoupeRadius = 0f;
+                    PushLoupe();
+                    _smoothedDistance = Mathf.Infinity;
+                    return;
+                }
+
+                _untrackedHold = 0f;
+                _loupeHeld = false;
+                // No dwell accrues while blind: a lost target is not evidence of anything
+                // (the black-box evaluation's central point — at close range it usually
+                // means the viewer moved CLOSER).
+                EnterDwellProgressS = 0f;
+                ExitDwellProgressS = 0f;
+                // Below the latch the blend lapses with the target. Coming down off a
+                // MICRO visit still pays the refractory; an aborted BLENDING does not.
+                if (State != MagState.Meso)
+                    ChangeState(MagState.Meso, float.PositiveInfinity,
+                                State == MagState.Blending ? 0f : refractoryS);
                 CloseLoupe();
                 _smoothedDistance = Mathf.Infinity;
                 return;
             }
+
+            // Re-acquired. Distance takes over again from here, so pulling away closes the
+            // iris through the ordinary arc — the transition out is the transition in,
+            // played backwards, exactly as before.
+            _untrackedHold = 0f;
+            _loupeHeld = false;
 
             // Start every frame from the aligned/tracked base pose so distance and
             // magnification are computed cleanly (base = 1:1 with the print).
@@ -268,10 +558,77 @@ namespace CoralPolyps
                 }
             }
 
-            if (float.IsInfinity(_smoothedDistance)) _smoothedDistance = rawDist;
+            // IS THIS POSE BELIEVABLE?
+            //
+            // Vuforia does not only lose a target — at very close range it keeps
+            // reporting it as FOUND while handing over a nonsense transform. The coral
+            // then renders shattered across the near plane, which is what the viewer
+            // actually sees flickering: not the microscale failing, but the skeleton
+            // being drawn somewhere impossible for a frame or two.
+            //
+            // The tracking-loss gate above cannot catch that, because the renderer is
+            // still enabled. So the pose is sanity-checked directly: the coral must be
+            // in front of the camera, within a plausible range, and must not have
+            // teleported since the previous frame. A rejected frame holds the last good
+            // distance rather than feeding garbage into the arcs.
+            bool plausible = useManualDistance || IsPlausiblePose(center, rawDist);
+            RawDistanceM = rawDist;          // the measurement itself, pre-substitution — HUD truth
+            LastPosePlausible = plausible;
+            if (plausible) _lastGoodRaw = rawDist;
+            else rawDist = _lastGoodRaw;
+
+            // Re-lock steadiness, measured on the RAW value: a hand retreating changes it
+            // by a millimetre or two per frame; a pose still hunting jumps it. Implausible
+            // frames reset the clock by construction, since the measurement itself leaps.
+            float lockJump = Mathf.Abs(RawDistanceM - _prevRawForLock);
+            _prevRawForLock = RawDistanceM;
+            LockStableS = (plausible && lockJump <= relockJitterM)
+                ? LockStableS + Time.deltaTime : 0f;
+            PoseLocked = VuforiaTracked && LockStableS >= relockStableS;
+
+            // THE CORAL HOLDS ITS LAST CONFIDENT POSE.
+            //
+            // The reported flicker is not the video failing — it is the MESH, drawn at a
+            // slightly-but-visibly wrong solve for a frame or two, alternating with the
+            // footage. Vuforia keeps saying TRACKED through those frames, so hiding on
+            // target-lost never caught them.
+            //
+            // Rather than chase every solve, the mesh is pinned to the last pose taken
+            // while confidence was high. A stale pose is invisible — the coral simply sits
+            // where it was — whereas a wrong pose that MOVES reads instantly as a fault.
+            // Confidence returning resumes live tracking with no snap, because the frozen
+            // pose is by definition the last good one.
+            if (!magnifyEnabled && _haveBase)
+            {
+                if (VuforiaTracked && plausible)
+                {
+                    _confidentPos = _root.position;
+                    _confidentRot = _root.rotation;
+                    _haveConfidentPose = true;
+                }
+                else if (_haveConfidentPose)
+                {
+                    _root.SetPositionAndRotation(_confidentPos, _confidentRot);
+                }
+            }
+
+            if (float.IsInfinity(_smoothedDistance)) { _smoothedDistance = rawDist; _euro.Reset(rawDist); }
+
+            // ONE EURO, NOT SMOOTHDAMP.
+            //
+            // A single smoothing constant is asked to do two irreconcilable jobs: kill
+            // jitter while the hand is still, and not lag while it moves. SmoothDamp can
+            // only trade one for the other, and tuned for stillness (0.79 s in the scene)
+            // it takes ~2 s to converge — which is precisely the "responds delayed to the
+            // phone's movements" being reported, and it is not fixable by picking a
+            // better constant.
+            //
+            // The One Euro filter adapts: its cutoff rises with the measured speed, so it
+            // is heavily damped at rest and nearly transparent during a deliberate move.
+            // That is what makes the magnifier feel attached to the hand.
             _smoothedDistance = useManualDistance
                 ? rawDist
-                : Mathf.SmoothDamp(_smoothedDistance, rawDist, ref _distVel, distanceSmoothTime);
+                : _euro.Filter(rawDist, Time.deltaTime, euroMinCutoff, euroBeta, euroDerivCutoff);
             float d = _smoothedDistance;
 
             // --- Magnification: scale up as the camera nears ---
@@ -309,7 +666,217 @@ namespace CoralPolyps
 
             // --- Takeover: past the loupe, the footage leaves the coral entirely ---
             float ft = InvLerpClamped(fullscreenStartDistance, fullscreenFullDistance, d);
-            FullscreenReveal = Mathf.Clamp01(fullscreenCurve.Evaluate(ft));
+            float wanted = Mathf.Clamp01(fullscreenCurve.Evaluate(ft));
+
+            // ONE GOOD FRAME IS NOT A RECOVERY. Vuforia re-acquires gradually: the pose
+            // becomes arithmetically plausible before the mesh is actually locked back
+            // onto the print, so trust requires poseRecoverS of continuous plausibility.
+            if (plausible) _poseGoodFor += Time.deltaTime;
+            else _poseGoodFor = 0f;
+            bool recovered = _poseGoodFor >= poseRecoverS;
+
+            StateAgeS += Time.deltaTime;
+            MicroRefractoryS = Mathf.Max(0f, MicroRefractoryS - Time.deltaTime);
+            bool mature = StateAgeS >= minStateS;
+
+            switch (State)
+            {
+                case MagState.Meso:
+                    // Fullscreen is structurally OFF here — nothing that never runs can
+                    // flicker. Entry is earned: d under the start distance, continuously.
+                    FullscreenReveal = 0f;
+                    TakeoverHeld = false;
+                    _takeoverLatched = false;
+
+                    EnterDwellProgressS = d < fullscreenStartDistance
+                        ? EnterDwellProgressS + Time.deltaTime : 0f;
+                    if (EnterDwellProgressS >= enterDwellS && mature)
+                        ChangeState(MagState.Blending, d);
+                    break;
+
+                case MagState.Micro:
+                    // Committed — but committed is not the same as frozen.
+                    //
+                    // The lock decides which. With the pose LOCKED the meso material is
+                    // sitting on the print, so it is safe to be seen: the reveal tracks
+                    // the hand 1:1 and the polyp shrinks as the viewer withdraws, exactly
+                    // as a lens does. `wanted` comes off the smoothed distance, so
+                    // following it directly is smooth without being laggy.
+                    //
+                    // WITHOUT a lock it holds at full cover, because shrinking would
+                    // uncover a coral that is not yet in place — the failure the hold
+                    // exists to prevent. So the two requirements are not in tension:
+                    // shrink whenever the material is ready, hold whenever it is not.
+                    //
+                    // Either way MICRO is not left until the exit dwell and the lock both
+                    // agree; the state machine governs COMMITMENT, the reveal governs
+                    // what is on screen, and only the latter follows the hand.
+                    FullscreenReveal = PoseLocked
+                        ? wanted
+                        : Mathf.MoveTowards(FullscreenReveal, 1f,
+                                            Time.deltaTime / Mathf.Max(takeoverReleaseS, 0.01f));
+                    TakeoverHeld = !recovered;   // stale pose: keep the iris centre frozen
+
+                    // Exit needs d beyond the HYSTERESIS distance, continuously. Any dip
+                    // resets the vote — and d only moves on plausible poses, so garbage
+                    // frames and tracking loss can never cast an exit vote at all.
+                    ExitDwellProgressS = d > microExitDistance
+                        ? ExitDwellProgressS + Time.deltaTime : 0f;
+
+                    if (ExitDwellProgressS >= exitDwellS && mature)
+                    {
+                        // The distance vote opens nothing by itself. The footage HOLDS at
+                        // full cover until the pose is re-LOCKED — Vuforia reporting
+                        // genuinely TRACKED and the measurement steady — because the frame
+                        // after this door is the meso mesh snapping back onto the print,
+                        // and uncovering onto a floating mesh is the worst frame this app
+                        // can show. The visitor just sees the footage linger a beat longer;
+                        // the lock usually arrives within a second of the coral re-entering
+                        // view. Fail-soft after relockMaxWaitS so nobody is ever trapped.
+                        RelockWaitS += Time.deltaTime;
+                        if (PoseLocked)
+                            ChangeState(MagState.Retreat, d);
+                        else if (RelockWaitS > relockMaxWaitS)
+                        {
+                            if (logStateChanges)
+                                Debug.Log($"[magnify] relock TIMEOUT after {RelockWaitS:F1}s " +
+                                          $"(vuforia={(VuforiaTracked ? "trk" : "EXT")} " +
+                                          $"stable={LockStableS:F2}s) — retreating without lock");
+                            ChangeState(MagState.Retreat, d);
+                        }
+                    }
+                    else RelockWaitS = 0f;
+                    break;
+
+                default:   // Blending and Retreat: the reveal follows the hand, both ways
+                    if (wanted >= takeoverLatchThreshold) _takeoverLatched = true;
+
+                    if (_takeoverLatched && !recovered)
+                    {
+                        // Committed and the pose is not trustworthy: FREEZE. The reveal is
+                        // a pure function of hand position — when the hand stops, it stops,
+                        // and it resumes from exactly here once the pose earns trust back.
+                        TakeoverHeld = true;
+                    }
+                    else
+                    {
+                        // THE FOOTAGE SUBSUMES THE MATERIAL UNLESS CONFIDENCE IS HIGH.
+                        //
+                        // Growing is always safe — leaning in only ever adds footage, and
+                        // it follows the hand immediately. SHRINKING is the dangerous
+                        // direction, because every pixel it gives back is a pixel of coral
+                        // mesh revealed, and revealing a mesh at a bad solve is the
+                        // flicker. So the reveal may only retreat while PoseLocked; with
+                        // confidence low it simply holds where it is, and the footage
+                        // keeps the screen until the mapping is trustworthy again.
+                        //
+                        // Holding is not the same as expanding: nothing moves on its own,
+                        // so a stationary phone still produces a stationary image.
+                        FullscreenReveal = wanted >= FullscreenReveal
+                            ? wanted
+                            : (PoseLocked
+                                ? Mathf.MoveTowards(FullscreenReveal, wanted,
+                                                    Time.deltaTime / Mathf.Max(takeoverReleaseS, 0.01f))
+                                : FullscreenReveal);
+
+                        TakeoverHeld = false;
+                        if (wanted < takeoverLatchThreshold * 0.5f && FullscreenReveal <= 0.001f)
+                            _takeoverLatched = false;
+                    }
+
+                    // MICRO is only entered once the screen is REALLY covered — which,
+                    // because the iris is clamped to the coral's silhouette, can only
+                    // happen when the coral itself fills the frame. Full commitment is
+                    // earned by getting close enough, never granted by the arc alone.
+                    if (FullscreenReveal >= 0.995f && ScreenIsCovered && mature && MicroRefractoryS <= 0f)
+                        ChangeState(MagState.Micro, d);
+                    else if (FullscreenReveal <= 0.001f && d > fullscreenStartDistance && mature)
+                        // Completing a RETREAT is "an exit" and pays the refractory. A
+                        // blend that never reached MICRO just lapses, free — that is what
+                        // keeps slow in-and-out movement 1:1 with the hand.
+                        ChangeState(MagState.Meso, d,
+                                    State == MagState.Retreat ? refractoryS : 0f);
+                    break;
+            }
+
+            // THE CORAL IS HIDDEN ONLY WHEN THE FOOTAGE GENUINELY COVERS EVERY PIXEL.
+            //
+            // The old test was `FullscreenReveal > 0.995 || (latched && !recovered)`, and
+            // both halves were wrong in the same way: they hid the tissue while the iris
+            // was still clamped to the coral's silhouette, so the feathered rim showed
+            // the bare white print and the table with no coral material anywhere. The
+            // meso layer must be present the entire time any part of the screen is not
+            // footage — it is the thing the magnification transitions back INTO, so it
+            // cannot be absent at the moment of transition.
+            //
+            // Losing the mis-registration guard costs little: a garbage pose at partial
+            // coverage now shows a briefly-wrong coral instead of no coral, and a
+            // briefly-wrong coral is the better failure. At full coverage — where the
+            // shattered near-plane mesh actually appeared — this still hides it.
+            //
+            // forceRenderingOff rather than .enabled, because the tracking-loss gate
+            // above reads .enabled and would mistake our own hiding for Vuforia's.
+            SetCoralHidden(ScreenIsCovered);
+        }
+
+        /// <summary>
+        /// The only door between states. Every passage is logged with the evidence (d, m,
+        /// how long the old state lasted) — the acceptance test is literally counting
+        /// these lines during a 60-second close hold, and they are thesis data besides.
+        /// </summary>
+        private void ChangeState(MagState next, float dNow, float refractory = 0f)
+        {
+            if (logStateChanges)
+                Debug.Log($"[magnify] {State} -> {next}   " +
+                          $"d={(float.IsInfinity(dNow) ? -1f : dNow):F3}m   " +
+                          $"m={FullscreenReveal:F2}   after {StateAgeS:F1}s in {State}");
+            State = next;
+            StateAgeS = 0f;
+            EnterDwellProgressS = 0f;
+            ExitDwellProgressS = 0f;
+            RelockWaitS = 0f;
+            if (refractory > 0f) MicroRefractoryS = refractory;
+        }
+
+        private void OnVuforiaStatus(Vuforia.ObserverBehaviour behaviour, Vuforia.TargetStatus status)
+        {
+            VuforiaTracked = status.Status == Vuforia.Status.TRACKED;
+        }
+
+        private void OnDestroy()
+        {
+            if (_observer != null) _observer.OnTargetStatusChanged -= OnVuforiaStatus;
+        }
+
+        /// <summary>
+        /// Reject transforms that cannot be real: behind the camera, absurdly near or
+        /// far, or jumped further since last frame than a hand could plausibly move.
+        /// This is what distinguishes "the viewer leaned in" from "Vuforia lost the pose
+        /// but has not admitted it yet".
+        /// </summary>
+        private bool IsPlausiblePose(Vector3 center, float rawDist)
+        {
+            Vector3 toCoral = center - cam.transform.position;
+            if (Vector3.Dot(toCoral, cam.transform.forward) <= 0f) return false;   // behind us
+            if (rawDist < 0f || rawDist > implausibleFarM) return false;
+
+            if (_lastGoodRaw > 0f)
+            {
+                float jump = Mathf.Abs(rawDist - _lastGoodRaw);
+                if (jump > implausibleJumpM) return false;
+            }
+            return true;
+        }
+
+        private void SetCoralHidden(bool hidden)
+        {
+            if (_coralHidden == hidden) return;
+            _coralHidden = hidden;
+
+            if (coralRenderer != null) coralRenderer.forceRenderingOff = hidden;
+            if (loupeTargets != null)
+                for (int i = 0; i < loupeTargets.Length; i++)
+                    if (loupeTargets[i] != null) loupeTargets[i].forceRenderingOff = hidden;
         }
 
         /// <summary>
@@ -331,6 +898,7 @@ namespace CoralPolyps
 
         private void CloseLoupe()
         {
+            SetCoralHidden(false);   // never leave the coral hidden with nothing covering it
             LoupeRadius = 0f;
             // Drop the takeover too. If tracking dies while the screen is fully covered,
             // holding the cover would leave the viewer staring at footage with no way to
