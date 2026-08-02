@@ -1,1 +1,6 @@
 *.tgz filter=lfs diff=lfs merge=lfs -text
+
+# Magnifier footage. Tracked before the first commit that contains it — moving a
+# blob into LFS afterwards means rewriting history, and these clips get re-encoded.
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+*.mov filter=lfs diff=lfs merge=lfs -text
