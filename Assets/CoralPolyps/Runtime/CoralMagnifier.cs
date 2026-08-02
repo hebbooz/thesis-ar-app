@@ -47,6 +47,15 @@ namespace CoralPolyps
         public float WDead { get; private set; }
         public string SourceName => _source != null ? _source.SourceName : "none";
 
+        // The resolved pair, published so the fullscreen takeover shows exactly what the
+        // loupe shows. FullscreenMagnifier reads these rather than re-deriving them:
+        // the two are on screen together through the whole handover, and a second copy
+        // of the weight rules would be a second thing to keep in step with §3.2.
+        public Texture ClipA { get; private set; }
+        public Texture ClipB { get; private set; }
+        public float Blend { get; private set; }
+        public bool SourceReady => _source != null && _source.Ready;
+
         static readonly int TexAID = Shader.PropertyToID("_TexA");
         static readonly int TexBID = Shader.PropertyToID("_TexB");
         static readonly int BlendID = Shader.PropertyToID("_Blend");
@@ -149,6 +158,8 @@ namespace CoralPolyps
         {
             if (_source == null || !_source.Ready)
             {
+                ClipA = ClipB = null;
+                Blend = 0f;
                 _mat.SetTexture(TexAID, null);
                 _mat.SetTexture(TexBID, null);
                 _mat.SetFloat(BlendID, 0f);
@@ -166,9 +177,13 @@ namespace CoralPolyps
             }
 
             float sum = wa + wb;
-            _mat.SetTexture(TexAID, a);
-            _mat.SetTexture(TexBID, b);
-            _mat.SetFloat(BlendID, sum > 1e-4f ? wb / sum : 0f);
+            ClipA = a;
+            ClipB = b;
+            Blend = sum > 1e-4f ? wb / sum : 0f;
+
+            _mat.SetTexture(TexAID, ClipA);
+            _mat.SetTexture(TexBID, ClipB);
+            _mat.SetFloat(BlendID, Blend);
         }
     }
 }

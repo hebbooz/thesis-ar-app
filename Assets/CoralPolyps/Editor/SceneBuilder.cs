@@ -83,6 +83,7 @@ namespace CoralPolyps
 
             BuildLighting();
             BuildControl(arCamera, coralRenderer, magnifierRenderer);
+            HideTargetRepresentations();
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             EditorSceneManager.MarkSceneDirty(scene);
@@ -312,6 +313,11 @@ namespace CoralPolyps
             magnifier.listener = listener;
             magnifier.magnifierRenderer = magnifierRenderer;
 
+            // The takeover layer. It sits beside CoralMagnifier and reads the pair the
+            // magnifier already resolved, so both beats of the reveal show the same
+            // footage at the same blend. Builds its own overlay canvas at runtime.
+            var fullscreen = control.AddComponent<FullscreenMagnifier>();
+
             var hud = control.AddComponent<CoralHud>();
             hud.listener = listener;
             hud.appearance = appearance;
@@ -332,6 +338,34 @@ namespace CoralPolyps
             // Registration beats zoom: scaling the tracked coral slides it off the
             // print. Left at 1 deliberately — raise it only as a considered trade.
             proximity.maxMagnification = 1f;
+
+            fullscreen.proximity = proximity;
+        }
+
+        /// <summary>
+        /// Deactivate Vuforia's Target Representation if it is still switched on.
+        ///
+        /// It is the white print mesh spawned by "Add Target Representation" purely so
+        /// the coral can be aligned against it. Left active it renders at runtime, and
+        /// because it occupies the same space as the virtual coral it shows through
+        /// every gap in the tissue as flat white patches — which reads as a broken
+        /// material rather than as a stray object, so it is diagnosed as anything but
+        /// what it is.
+        ///
+        /// The builder cannot create it (that step is interactive and lives in Vuforia's
+        /// own inspector), but it can make sure it is never left on. This is here
+        /// because the manual instruction to deactivate it was already missed once.
+        /// </summary>
+        static void HideTargetRepresentations()
+        {
+            foreach (var go in UnityEngine.Object.FindObjectsByType<GameObject>(
+                         FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (!go.activeSelf) continue;
+                if (!go.name.EndsWith("Target Representation", System.StringComparison.Ordinal)) continue;
+                go.SetActive(false);
+                Debug.Log($"[SceneBuilder] deactivated '{go.name}' (editor-only alignment aid).");
+            }
         }
 
         // -------------------------------------------------------------------- Output

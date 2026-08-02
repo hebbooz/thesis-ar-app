@@ -93,6 +93,29 @@ namespace CoralPolyps
         [Tooltip("Shapes proximity (0 at start, 1 at full) -> loupe radius.")]
         public AnimationCurve loupeCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
+        // The third and last arc. The loupe can only ever paint the coral's own surface —
+        // it is a projection onto a duplicate of the coral mesh — so a reveal that grows
+        // past the silhouette is impossible there by construction. This arc hands the
+        // footage to FullscreenMagnifier, which is not bound to any geometry.
+        //
+        // It deliberately starts INSIDE loupeFullDistance: the loupe finishes opening
+        // first, then the takeover lifts it off the object. Two beats, not a dissolve
+        // between two things fighting for the same moment.
+        //
+        // A useful side effect: Vuforia loses a ~10 cm Model Target somewhere around
+        // 5 cm, and the takeover is opaque by then — so the tracking failure happens
+        // behind a full screen of footage and is never seen.
+        [Header("Fullscreen takeover arc (metres from coral surface)")]
+        [Tooltip("At or beyond this distance the footage is entirely on the coral. Should sit " +
+                 "at or inside loupeFullDistance so the loupe finishes opening first.")]
+        public float fullscreenStartDistance = 0.07f;
+
+        [Tooltip("At or within this distance the footage fills the screen. Must be < start.")]
+        public float fullscreenFullDistance = 0.03f;
+
+        [Tooltip("Shapes proximity (0 at start, 1 at full) -> screen coverage.")]
+        public AnimationCurve fullscreenCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
         [Header("Distance measurement")]
         [Tooltip("Measure to the coral's SURFACE rather than its hidden bounds centre, so the " +
                  "distances above mean the real gap between device and coral. With this off, a " +
@@ -125,6 +148,13 @@ namespace CoralPolyps
 
         /// <summary>Current loupe radius in world metres; 0 means shut.</summary>
         public float LoupeRadius { get; private set; }
+
+        /// <summary>
+        /// 0 = footage lives entirely on the coral, 1 = footage fills the screen.
+        /// Read by FullscreenMagnifier. Zeroed on tracking loss along with the loupe,
+        /// so losing the target never strands the viewer inside an opaque takeover.
+        /// </summary>
+        public float FullscreenReveal { get; private set; }
 
         /// <summary>Current magnification factor (1 = life-size).</summary>
         public float Magnification { get; private set; } = 1f;
@@ -276,6 +306,10 @@ namespace CoralPolyps
             LoupeRadius = maxLoupeRadius * Mathf.Clamp01(loupeCurve.Evaluate(lt));
             LoupeCenter = FindLoupeCenter(center);
             PushLoupe();
+
+            // --- Takeover: past the loupe, the footage leaves the coral entirely ---
+            float ft = InvLerpClamped(fullscreenStartDistance, fullscreenFullDistance, d);
+            FullscreenReveal = Mathf.Clamp01(fullscreenCurve.Evaluate(ft));
         }
 
         /// <summary>
@@ -298,6 +332,11 @@ namespace CoralPolyps
         private void CloseLoupe()
         {
             LoupeRadius = 0f;
+            // Drop the takeover too. If tracking dies while the screen is fully covered,
+            // holding the cover would leave the viewer staring at footage with no way to
+            // understand why — and no way to re-acquire, since they cannot see the coral
+            // to point at it.
+            FullscreenReveal = 0f;
             PushLoupe();
         }
 

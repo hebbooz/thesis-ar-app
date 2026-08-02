@@ -2,7 +2,8 @@
     "name": "CoralPolyps.Runtime",
     "rootNamespace": "CoralPolyps",
     "references": [
-        "extOSC"
+        "extOSC",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

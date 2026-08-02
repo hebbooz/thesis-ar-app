@@ -1,5 +1,6 @@
 {
-  "server_host": "192.168.8.10",
+  "_server_host_note": "TESTING VALUE \u2014 this Mac on the current LAN. The exhibition value is 192.168.8.10 (GL.iNet Opal reserved lease). Revert before the exhibition build.",
+  "server_host": "192.168.0.67",
   "server_port": 9000,
   "listen_port": 9001,
   "client_id": "",
