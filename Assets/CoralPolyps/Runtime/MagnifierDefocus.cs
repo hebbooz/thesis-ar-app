@@ -333,11 +333,13 @@ namespace CoralPolyps
                 _bokeh = true;
                 dof.mode.Override(DepthOfFieldMode.Bokeh);
                 dof.focusDistance.Override(Mathf.Max(bokehFocusDistanceM, 0.1f));
-                // Start at the SHARP end. LateUpdate drives these two every frame; setting
-                // them here only decides what the very first frame looks like, and it must
-                // be sharp or enabling the pass is itself a visible step.
+                // Aperture is fixed for the whole ramp; only the focal length moves, so that
+                // the blur is the product of one term rather than two (see LateUpdate).
+                dof.aperture.Override(Mathf.Clamp(bokehAperture, 1f, 32f));
+                // Start at the SHARP end. LateUpdate drives the focal length every frame;
+                // setting it here only decides what the very first frame looks like, and it
+                // must be sharp or enabling the pass is itself a visible step.
                 dof.focalLength.Override(Mathf.Clamp(bokehFocalLengthStart, 1f, 300f));
-                dof.aperture.Override(Mathf.Clamp(bokehApertureStart, 1f, 32f));
             }
 
             Debug.Log($"[defocus] {dof.mode.value} blur, max weight {maxWeight:F2}, " +
