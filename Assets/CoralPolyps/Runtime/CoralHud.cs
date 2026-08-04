@@ -163,9 +163,14 @@ namespace CoralPolyps
         }
 
         /// <summary>
-        /// The state machine's whole dashboard: state + age, m, filtered and raw distance,
-        /// pose trust. "lost" for an infinite distance (target dropped), FROZEN while the
-        /// takeover is holding against an untrusted pose.
+        /// The magnifier's dashboard: label + age, the reveal, the effective and raw
+        /// distances, and whether the input is being held.
+        ///
+        /// `d` is the number to watch. Since the rewrite the reveal is a pure function of
+        /// it, so `m` and `d` must move together or not at all — if `m` changes while `d`
+        /// sits still, something downstream has grown a mind of its own and that is a bug,
+        /// not a tuning problem. HELD means the pose is not believable and `d` is frozen,
+        /// which is why the picture is frozen too.
         /// </summary>
         string MagnifyLine()
         {
@@ -175,25 +180,20 @@ namespace CoralPolyps
                 ? "-" : $"{proximity.RawDistanceM:F3}";
             return $"magnify: {proximity.State} {proximity.StateAgeS:F1}s   " +
                    $"m={proximity.FullscreenReveal:F2}   d={d} (raw {raw})   " +
-                   $"pose {(proximity.LastPosePlausible ? "ok" : "BAD")} {proximity.PoseTrustS:F1}s" +
-                   (proximity.TakeoverHeld ? "   FROZEN" : "") +
-                   (proximity.RelockWaitS > 0f ? $"   WAIT-LOCK {proximity.RelockWaitS:F1}s" : "");
+                   $"pose {(proximity.LastPosePlausible ? "ok" : "BAD")}" +
+                   (proximity.TakeoverHeld ? $"   HELD {proximity.HeldForS:F1}s" : "");
         }
 
         string MagnifyTimersLine() =>
             $"cover {(proximity.fullscreen != null ? proximity.fullscreen.ScreenCoverage01 : -1f):F2} " +
             $"{(proximity.fullscreen != null && proximity.fullscreen.ScreenFullyCovered ? "FULL" : "partial")}   " +
-            $"enter {proximity.EnterDwellProgressS:F2}s   " +
-            $"exit {proximity.ExitDwellProgressS:F2}s   " +
-            $"refractory {proximity.MicroRefractoryS:F1}s   " +
-            $"lock {(proximity.PoseLocked ? "OK" : $"{proximity.LockStableS:F2}s")} " +
-            $"({(proximity.VuforiaTracked ? "trk" : "EXT")})   " +
-            $"loupe {proximity.LoupeRadius * 1000f:F0}mm   x{proximity.Magnification:F1}";
+            $"loupe {proximity.LoupeRadius * 1000f:F0}mm   x{proximity.Magnification:F1}   " +
+            $"vuforia {(proximity.VuforiaTracked ? "trk" : "EXT")}";
 
         /// <summary>
-        /// White in MESO, green through the blend, blue at full MICRO — and amber the
-        /// moment the pose is distrusted or the takeover freezes, so a recording shows
-        /// exactly when the gates engaged.
+        /// White at meso, green through the blend, blue at full micro — and amber the moment
+        /// the pose is distrusted or the input is held, so a recording shows exactly when the
+        /// picture stopped being live.
         /// </summary>
         Color MagnifyColor()
         {
@@ -204,7 +204,6 @@ namespace CoralPolyps
                 case ProximityRevealController.MagState.Micro:
                     return new Color(0.6f, 0.85f, 1f);
                 case ProximityRevealController.MagState.Blending:
-                case ProximityRevealController.MagState.Retreat:
                     return new Color(0.8f, 1f, 0.8f);
                 default:
                     return Color.white;
