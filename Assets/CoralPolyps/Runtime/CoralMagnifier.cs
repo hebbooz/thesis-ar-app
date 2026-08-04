@@ -47,6 +47,10 @@ namespace CoralPolyps
         public float WDead { get; private set; }
         public string SourceName => _source != null ? _source.SourceName : "none";
 
+        /// <summary>Source health for the HUD — crucially, whether the footage is MOVING,
+        /// which "ready" does not answer. See IMagnifierSource.Status.</summary>
+        public string SourceStatus => _source != null ? _source.Status : "-";
+
         // The resolved pair, published so the fullscreen takeover shows exactly what the
         // loupe shows. FullscreenMagnifier reads these rather than re-deriving them:
         // the two are on screen together through the whole handover, and a second copy

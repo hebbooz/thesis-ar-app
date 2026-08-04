@@ -31,5 +31,15 @@ namespace CoralPolyps
         /// <summary>Short name for the HUD, so "which source am I running?" is
         /// answerable on a plinth without a rebuild.</summary>
         string SourceName { get; }
+
+        /// <summary>
+        /// One-line health for the HUD. "Ready" is not the same question as "is it
+        /// MOVING": a video source that prepared and then parked on frame 0 is Ready,
+        /// shows a correct-looking still, and is indistinguishable from working footage
+        /// unless something reports the playhead. That failure has cost this project real
+        /// time twice — once to a URL that would not parse, once to several VideoPlayers
+        /// sharing a GameObject — so it gets a permanent readout rather than a comment.
+        /// </summary>
+        string Status { get; }
     }
 }

@@ -36,6 +36,10 @@ namespace CoralPolyps
         public bool Ready => _alive != null;
         public string SourceName => _gridMode ? "placeholder-grid" : "placeholder";
 
+        // Generated textures, so there is no playhead to stall and nothing to report
+        // beyond whether they exist yet.
+        public string Status => Ready ? "generated" : "building";
+
         void Awake()
         {
             // Read the config directly: this component is added at runtime by

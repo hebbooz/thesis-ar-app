@@ -94,17 +94,44 @@ namespace CoralPolyps
                  "exactly the range the device is hottest and closest to thermal throttling.")]
         public bool skipWhenFullyCovered = true;
 
+        // WHY THERE ARE TWO MODES.
+        //
+        // Gaussian is the mobile-sane choice and was the original pick. Its ceiling is low
+        // and hard: URP clamps gaussianMaxRadius to 1.5 and there is no way past it, so
+        // "make the blur much greater" is simply not answerable in that mode — it was
+        // already at the cap.
+        //
+        // Bokeh is a physical-camera simulation and will go as far as you want: focus at
+        // 0.1 m with a 300 mm lens wide open puts everything in this scene many stops out
+        // of focus. It costs meaningfully more, which is a real concern for an all-day
+        // exhibition on an iPad already running three video decodes and a tracker — but
+        // the pass only runs while the iris is partly open, and switches off entirely once
+        // the screen is covered, so it is a spend of seconds per visitor rather than a
+        // permanent tax. Fall back to gaussian in config if the soak says otherwise.
         [Header("Depth of Field (runtime-built volume only)")]
-        [Tooltip("Gaussian rather than Bokeh. Bokeh is a physical-camera simulation with a " +
-                 "cost to match; on an iPad running three video decodes, a tracker and an " +
-                 "all-day soak it is not a defensible spend for an effect that is behind an " +
-                 "opaque iris seconds later.")]
+        [Tooltip("\"bokeh\" for a heavy, physically-modelled defocus; \"gaussian\" for the " +
+                 "cheap one, whose maximum is fixed and modest. Set from coral-ar.json.")]
+        public string mode = "bokeh";
+
+        [Tooltip("Bokeh: metres at which the scene is IN focus. At 0.1 the focal plane sits " +
+                 "essentially at the lens, so the coral and the room are both far outside it.")]
+        public float bokehFocusDistanceM = 0.1f;
+
+        [Tooltip("Bokeh: focal length in mm, 1-300. Longer = shallower depth of field = more " +
+                 "blur. At 300 the defocus is extreme, which is the point.")]
+        public float bokehFocalLength = 300f;
+
+        [Tooltip("Bokeh: f-stop, 1-32. LOWER is more blur. 1 is wide open.")]
+        public float bokehAperture = 1f;
+
+        [Tooltip("Gaussian: blur radius. URP clamps this to 1.5 — this is the ceiling that " +
+                 "made bokeh necessary.")]
         public float gaussianMaxRadius = 1.5f;
 
-        [Tooltip("Everything beyond this distance from the camera (metres) is fully defocused. " +
-                 "Tiny on purpose: the subject of this blur is the whole scene, so there is no " +
-                 "in-focus plane to preserve — the sharp thing on screen is the footage, and " +
-                 "that is not part of the scene at all.")]
+        [Tooltip("Gaussian: everything beyond this distance from the camera (metres) is fully " +
+                 "defocused. Tiny on purpose — the subject of this blur is the whole scene, so " +
+                 "there is no in-focus plane to preserve. The sharp thing on screen is the " +
+                 "footage, and that is not part of the scene at all.")]
         public float focusEndM = 0.01f;
 
         /// <summary>Applied volume weight this frame. Shown in the HUD.</summary>
@@ -126,6 +153,7 @@ namespace CoralPolyps
             var cfg = CoralConfig.Shared;
             maxWeight = Mathf.Clamp01(cfg.magnifier_blur);
             blurOnsetReveal = Mathf.Clamp(cfg.magnifier_blur_onset, 0.01f, 1f);
+            if (!string.IsNullOrWhiteSpace(cfg.magnifier_blur_mode)) mode = cfg.magnifier_blur_mode;
 
             if (volume == null) volume = Build();
             if (volume != null && volume.profile != null)
@@ -204,12 +232,25 @@ namespace CoralPolyps
             _owned.profile = _ownedProfile;
 
             var dof = _ownedProfile.Add<DepthOfField>(true);
-            dof.mode.Override(DepthOfFieldMode.Gaussian);
-            dof.gaussianStart.Override(0f);
-            dof.gaussianEnd.Override(Mathf.Max(focusEndM, 1e-3f));
-            dof.gaussianMaxRadius.Override(gaussianMaxRadius);
-            dof.highQualitySampling.Override(false);   // mobile; the blur is never inspected closely
 
+            if (mode.Equals("gaussian", System.StringComparison.OrdinalIgnoreCase))
+            {
+                dof.mode.Override(DepthOfFieldMode.Gaussian);
+                dof.gaussianStart.Override(0f);
+                dof.gaussianEnd.Override(Mathf.Max(focusEndM, 1e-3f));
+                dof.gaussianMaxRadius.Override(gaussianMaxRadius);
+                dof.highQualitySampling.Override(false);   // never inspected closely
+            }
+            else
+            {
+                dof.mode.Override(DepthOfFieldMode.Bokeh);
+                dof.focusDistance.Override(Mathf.Max(bokehFocusDistanceM, 0.1f));
+                dof.focalLength.Override(Mathf.Clamp(bokehFocalLength, 1f, 300f));
+                dof.aperture.Override(Mathf.Clamp(bokehAperture, 1f, 32f));
+            }
+
+            Debug.Log($"[defocus] {dof.mode.value} blur, max weight {maxWeight:F2}, " +
+                      $"full by reveal {blurOnsetReveal:F2}");
             return _owned;
         }
 

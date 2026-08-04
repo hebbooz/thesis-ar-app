@@ -102,6 +102,14 @@ namespace CoralPolyps
         /// </summary>
         public float magnifier_blur_onset = 0.12f;
 
+        /// <summary>
+        /// "bokeh" or "gaussian". Gaussian is cheap but URP caps its radius at 1.5, which
+        /// is a low and hard ceiling — bokeh is the only way to a genuinely heavy defocus.
+        /// It costs more per frame, but only while the iris is partly open, and not at all
+        /// once the screen is covered. Drop to gaussian if the endurance soak complains.
+        /// </summary>
+        public string magnifier_blur_mode = "bokeh";
+
         public bool hud_enabled = true;
 
         /// <summary>Where this config was actually loaded from. Shown in the HUD:

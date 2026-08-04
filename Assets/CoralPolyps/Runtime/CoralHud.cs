@@ -161,7 +161,7 @@ namespace CoralPolyps
                 : "stress=-";
             string mag = magnifier != null
                 ? $"magnifier=alive {magnifier.WAlive:F2} / fluoro {magnifier.WFluorescent:F2} / " +
-                  $"dead {magnifier.WDead:F2}   src={magnifier.SourceName}"
+                  $"dead {magnifier.WDead:F2}   src={magnifier.SourceName} [{magnifier.SourceStatus}]"
                 : $"magnifier=-   src={CoralConfig.Shared.magnifier_source}";
 
             return $"{stress}   {mag}";

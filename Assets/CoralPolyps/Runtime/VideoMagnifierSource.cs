@@ -42,12 +42,60 @@ namespace CoralPolyps
         public bool Ready => _rtAlive != null && _rtFluorescent != null && _rtDead != null;
         public string SourceName => "video";
 
+        /// <summary>
+        /// How many clips prepared, and how many of them actually advanced their playhead
+        /// since the last probe. "3/3 moving" is working footage; "3/3 STALLED" is three
+        /// correct-looking still images, which is what a frozen VideoPlayer looks like and
+        /// is otherwise impossible to tell apart on a device with no console.
+        /// </summary>
+        public string Status =>
+            $"{_prepared}/{_players.Count} " +
+            (_players.Count == 0 ? "none"
+             : _prepared == 0 ? "NOT PREPARED"
+             : _advancing > 0 ? $"{_advancing} moving" : "STALLED");
+
+        int _prepared;
+        int _advancing;
+        long[] _lastFrame = new long[0];
+        float _sinceFrameProbe;
+
         void Awake()
         {
             var clips = CoralConfig.Shared.magnifier_clips;
             Create(clips.alive, rt => _rtAlive = rt);
             Create(clips.fluorescent, rt => _rtFluorescent = rt);
             Create(clips.dead, rt => _rtDead = rt);
+        }
+
+        /// <summary>
+        /// A filesystem path is not a URL, and VideoPlayer.url parses it as one.
+        ///
+        /// THIS PROJECT LIVES UNDER "2026 University". That space is not escaped in a raw
+        /// path, so AVFoundation gets a malformed URL, and the failure is close to silent:
+        /// the player never prepares, prepareCompleted never fires, no RenderTexture is
+        /// ever created, Ready stays false and the magnifier holds black forever. The
+        /// nudge watchdog below cannot help either — it only restarts players that
+        /// PREPARED and then stopped.
+        ///
+        /// Worse, it only breaks in the EDITOR. On the iPad, streamingAssetsPath is inside
+        /// the app bundle and has no spaces, so the device build works and the editor does
+        /// not — which is the exact opposite of the direction bugs are usually looked for,
+        /// and is why this survived being "the video isn't playing" for a while.
+        ///
+        /// Uri.AbsoluteUri percent-encodes properly and yields a file:// URL that is valid
+        /// on both. Keep this even after the project moves somewhere without spaces: the
+        /// next person to check out into a path with one should not have to find this
+        /// twice.
+        /// </summary>
+        static string LocalUrl(string path)
+        {
+            try { return new System.Uri(path).AbsoluteUri; }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[magnifier] could not build a file URL for {path} " +
+                                 $"({e.Message}) — falling back to the raw path.");
+                return path;
+            }
         }
 
         void Create(string fileName, System.Action<RenderTexture> assign)
@@ -67,9 +115,14 @@ namespace CoralPolyps
             var host = new GameObject($"Clip_{Path.GetFileNameWithoutExtension(fileName)}");
             host.transform.SetParent(transform, false);
 
+            string path = Path.Combine(Application.streamingAssetsPath, fileName);
+            if (!File.Exists(path))
+                Debug.LogError($"[magnifier] {fileName} NOT FOUND at {path} — the magnifier " +
+                               "will hold black. Check magnifier_clips in coral-ar.json.");
+
             var vp = host.AddComponent<VideoPlayer>();
             vp.source = VideoSource.Url;
-            vp.url = Path.Combine(Application.streamingAssetsPath, fileName);
+            vp.url = LocalUrl(path);
             vp.renderMode = VideoRenderMode.RenderTexture;
             vp.isLooping = true;                  // seamless, forever, never seeked
             vp.playOnAwake = false;
@@ -98,6 +151,7 @@ namespace CoralPolyps
                 p.targetTexture = rt;
                 assign(rt);
                 p.Play();
+                _prepared++;
                 Debug.Log($"[magnifier] {fileName} prepared {p.width}x{p.height}, looping");
             };
 
@@ -117,6 +171,8 @@ namespace CoralPolyps
         /// </summary>
         void Update()
         {
+            ProbeFrameAdvance();
+
             if (_nudgesLeft <= 0) return;
 
             _sinceNudge += Time.unscaledDeltaTime;
@@ -140,6 +196,35 @@ namespace CoralPolyps
                 Debug.LogWarning("[magnifier] gave up nudging stalled clips — check the " +
                                  "prepared logs above; a clip that never plays is a decode " +
                                  "problem, not a timing one.");
+        }
+
+        /// <summary>
+        /// Is the playhead actually moving? Sampled rather than watched every frame,
+        /// because at 30 fps footage on a 60 fps display roughly half the frames show no
+        /// change and a per-frame test would read as a stall constantly. Half a second is
+        /// long enough that even a slow clip must have advanced.
+        /// </summary>
+        void ProbeFrameAdvance()
+        {
+            _sinceFrameProbe += Time.unscaledDeltaTime;
+            if (_sinceFrameProbe < 0.5f) return;
+            _sinceFrameProbe = 0f;
+
+            if (_lastFrame.Length != _players.Count)
+            {
+                _lastFrame = new long[_players.Count];
+                for (int i = 0; i < _lastFrame.Length; i++) _lastFrame[i] = -1;
+            }
+
+            int moving = 0;
+            for (int i = 0; i < _players.Count; i++)
+            {
+                var vp = _players[i];
+                if (vp == null || !vp.isPrepared) continue;
+                if (vp.frame != _lastFrame[i]) moving++;
+                _lastFrame[i] = vp.frame;
+            }
+            _advancing = moving;
         }
 
         void OnDestroy()
