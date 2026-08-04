@@ -94,13 +94,20 @@ namespace CoralPolyps
         public float magnifier_blur = 1.0f;
 
         /// <summary>
-        /// The reveal at which the blur reaches full, 0..1. Small on purpose: the point is
-        /// that the screen is ALREADY soft while the opening is still one corallite wide,
-        /// which is what sells the magnification and what makes the takeover arrive as a
-        /// continuation rather than as a change of shot. Raising this toward 1 drags the
-        /// blur out across the whole approach and loses that.
+        /// The reveal at which the blur reaches full, 0..1 — i.e. how much of the approach
+        /// the softening is spread across.
+        ///
+        /// It sets a balance rather than a preference. Too small and the screen snaps from
+        /// sharp to soft in under a centimetre of hand travel, which reads as a cut. Too
+        /// large and the blur is still arriving when the footage has already taken over, so
+        /// it never does its job of quieting the surroundings while the opening is small.
+        /// 0.35 spreads it over roughly the first 7 cm of the takeover.
+        ///
+        /// This is only meaningful because the bokeh ramp is perceptually linear (see
+        /// MagnifierDefocus). Against a raw focal-length sweep the number would be a lie,
+        /// since all the visible change would sit in the last fraction of it.
         /// </summary>
-        public float magnifier_blur_onset = 0.12f;
+        public float magnifier_blur_onset = 0.35f;
 
         /// <summary>
         /// "bokeh" or "gaussian". Gaussian is cheap but URP caps its radius at 1.5, which

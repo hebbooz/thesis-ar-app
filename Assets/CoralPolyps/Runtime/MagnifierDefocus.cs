@@ -113,16 +113,39 @@ namespace CoralPolyps
                  "cheap one, whose maximum is fixed and modest. Set from coral-ar.json.")]
         public string mode = "bokeh";
 
-        [Tooltip("Bokeh: metres at which the scene is IN focus. At 0.1 the focal plane sits " +
-                 "essentially at the lens, so the coral and the room are both far outside it.")]
-        public float bokehFocusDistanceM = 0.1f;
+        // BOKEH IS RAMPED BY ITS OPTICS, NOT BY VOLUME WEIGHT.
+        //
+        // Weight-blending a bokeh volume produces a hard step, and the reason is not
+        // obvious: weight interpolates a volume's parameters against the STACK DEFAULTS,
+        // and URP's default Depth of Field focuses at 10 metres. The mode enum does not
+        // interpolate at all — enums cannot — so the instant the volume carries any weight,
+        // the pass switches to Bokeh and a subject 20 cm from the lens is already many
+        // stops out of focus. The ramp was real; it just ran between "sharp" and "very
+        // blurry" with nothing in between, which is exactly the hard transition reported.
+        //
+        // So weight is pinned at 1 whenever the pass runs, and the optics themselves are
+        // driven: a short lens stopped well down (sharp) opening into a long lens wide open
+        // (extreme). Circle of confusion goes as focalLength^2 / aperture, so a linear
+        // drive gives a naturally gentle start and a strong finish — which is the shape
+        // being asked for, arrived at by physics rather than by curve-fitting.
+        [Tooltip("Bokeh: metres at which the scene is IN focus. Far away on purpose — " +
+                 "everything real is much nearer, so the whole scene sits on one side of the " +
+                 "focal plane and defocuses together with no in-focus band sliding through it.")]
+        public float bokehFocusDistanceM = 10f;
 
-        [Tooltip("Bokeh: focal length in mm, 1-300. Longer = shallower depth of field = more " +
-                 "blur. At 300 the defocus is extreme, which is the point.")]
+        [Tooltip("Bokeh: focal length in mm at ZERO blur. Short = deep depth of field. Wants " +
+                 "to be short enough that the first frame of the ramp is genuinely sharp, or " +
+                 "enabling the pass is itself a visible step.")]
+        public float bokehFocalLengthStart = 5f;
+
+        [Tooltip("Bokeh: focal length in mm at FULL blur, 1-300. Longer = shallower depth of " +
+                 "field. At 300 the defocus is extreme, which is the point.")]
         public float bokehFocalLength = 300f;
 
-        [Tooltip("Bokeh: f-stop, 1-32. LOWER is more blur. 1 is wide open.")]
-        public float bokehAperture = 1f;
+        [Tooltip("Bokeh: f-stop, held constant across the ramp. LOWER is more blur. The focal " +
+                 "length alone carries the ramp — see the note below on why moving both at " +
+                 "once makes the response impossible to reason about.")]
+        public float bokehAperture = 1.4f;
 
         [Tooltip("Gaussian: blur radius. URP clamps this to 1.5 — this is the ceiling that " +
                  "made bokeh necessary.")]
@@ -140,6 +163,7 @@ namespace CoralPolyps
         Volume _owned;
         VolumeProfile _ownedProfile;
         DepthOfField _dof;
+        bool _bokeh;
 
         void Awake()
         {
@@ -243,10 +267,14 @@ namespace CoralPolyps
             }
             else
             {
+                _bokeh = true;
                 dof.mode.Override(DepthOfFieldMode.Bokeh);
                 dof.focusDistance.Override(Mathf.Max(bokehFocusDistanceM, 0.1f));
-                dof.focalLength.Override(Mathf.Clamp(bokehFocalLength, 1f, 300f));
-                dof.aperture.Override(Mathf.Clamp(bokehAperture, 1f, 32f));
+                // Start at the SHARP end. LateUpdate drives these two every frame; setting
+                // them here only decides what the very first frame looks like, and it must
+                // be sharp or enabling the pass is itself a visible step.
+                dof.focalLength.Override(Mathf.Clamp(bokehFocalLengthStart, 1f, 300f));
+                dof.aperture.Override(Mathf.Clamp(bokehApertureStart, 1f, 32f));
             }
 
             Debug.Log($"[defocus] {dof.mode.value} blur, max weight {maxWeight:F2}, " +
@@ -270,12 +298,41 @@ namespace CoralPolyps
             // never that it arrives on its own.
             float t = Mathf.Clamp01(reveal / Mathf.Max(blurOnsetReveal, 0.01f));
             Weight = covered ? 0f : Mathf.Clamp01(response.Evaluate(t)) * maxWeight;
-            volume.weight = Weight;
+
+            if (_bokeh && _dof != null)
+            {
+                // Drive the optics, hold the weight. See the note on the bokeh fields for
+                // why weight-blending this mode produces a step rather than a ramp.
+                //
+                // LERP THE SQUARE, NOT THE LENGTH. Circle of confusion goes as focalLength
+                // squared, so a linear sweep of focal length is not a linear sweep of blur —
+                // it is imperceptible for the first two thirds and then arrives all at once,
+                // which is the same hard transition by a subtler route. Interpolating f^2 and
+                // taking the root makes the RESULT linear in the drive, so `response` and
+                // blurOnsetReveal shape what is actually seen rather than what is set.
+                //
+                // Aperture is held constant for the same reason: moving both multiplies two
+                // ramps together and the response stops being reasonable about.
+                float f0 = Mathf.Clamp(bokehFocalLengthStart, 1f, 300f);
+                float f1 = Mathf.Clamp(bokehFocalLength, 1f, 300f);
+                _dof.focalLength.value = Mathf.Sqrt(Mathf.Lerp(f0 * f0, f1 * f1, Weight));
+                _dof.aperture.value = Mathf.Clamp(bokehAperture, 1f, 32f);
+                volume.weight = 1f;
+            }
+            else
+            {
+                // Gaussian blends acceptably on weight: its mode IS the stack default, so
+                // nothing snaps, and gaussianEnd interpolates from 30 m down, which keeps a
+                // 20 cm subject genuinely in focus through the early part of the ramp.
+                volume.weight = Weight;
+            }
 
             // Volumes are not free even at weight 0 — the override still resolves and URP
             // still schedules the pass. Switch the whole thing off when there is nothing
-            // to blur, which is most of the time the piece is running.
-            bool wanted = Weight > 0.001f;
+            // to blur, which is most of the time the piece is running. Safe to toggle: at
+            // this threshold the driven optics are still at their sharp end, so the frame
+            // either side of the switch is identical.
+            bool wanted = Weight > 0.01f;
             if (volume.enabled != wanted) volume.enabled = wanted;
         }
 
