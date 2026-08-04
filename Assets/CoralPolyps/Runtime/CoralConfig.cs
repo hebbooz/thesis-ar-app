@@ -110,12 +110,20 @@ namespace CoralPolyps
         public float magnifier_blur_onset = 0.35f;
 
         /// <summary>
-        /// "bokeh" or "gaussian". Gaussian is cheap but URP caps its radius at 1.5, which
-        /// is a low and hard ceiling — bokeh is the only way to a genuinely heavy defocus.
-        /// It costs more per frame, but only while the iris is partly open, and not at all
-        /// once the screen is covered. Drop to gaussian if the endurance soak complains.
+        /// "radial", "bokeh" or "gaussian".
+        ///
+        /// RADIAL is the only mode that keeps the loupe patch sharp. The footage is painted
+        /// on a duplicate of the coral mesh, at identical depth to the coral, so the two
+        /// Depth of Field modes below cannot separate them even in principle — they blur
+        /// the polyps along with the skeleton. Radial masks in screen space instead, sharp
+        /// inside the loupe and softening outward from its rim, which is what a magnifying
+        /// glass actually looks like. It requires MagnifierBlurFeature on the URP renderer
+        /// asset; without it nothing blurs at all.
+        ///
+        /// BOKEH and GAUSSIAN are whole-screen Depth of Field, kept as fallbacks. Gaussian
+        /// is cheapest but URP caps its radius at 1.5, a low and hard ceiling.
         /// </summary>
-        public string magnifier_blur_mode = "bokeh";
+        public string magnifier_blur_mode = "radial";
 
         public bool hud_enabled = true;
 

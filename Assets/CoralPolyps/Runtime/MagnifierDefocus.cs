@@ -108,10 +108,28 @@ namespace CoralPolyps
         // the pass only runs while the iris is partly open, and switches off entirely once
         // the screen is covered, so it is a spend of seconds per visitor rather than a
         // permanent tax. Fall back to gaussian in config if the soak says otherwise.
-        [Header("Depth of Field (runtime-built volume only)")]
-        [Tooltip("\"bokeh\" for a heavy, physically-modelled defocus; \"gaussian\" for the " +
-                 "cheap one, whose maximum is fixed and modest. Set from coral-ar.json.")]
-        public string mode = "bokeh";
+        [Header("Mode")]
+        [Tooltip("\"radial\" keeps the loupe patch sharp and softens outward from its rim — " +
+                 "the magnifying-glass look, and the only mode that can do it. \"bokeh\" and " +
+                 "\"gaussian\" are whole-screen Depth of Field, which cannot separate the " +
+                 "footage from the coral because they sit at the same depth. Set from " +
+                 "coral-ar.json.")]
+        public string mode = "radial";
+
+        [Header("Radial (mode = radial)")]
+        [Tooltip("How far past the loupe's rim the blur takes to reach full, in screen " +
+                 "heights. Wide reads as optics; narrow puts a visible ring right where the " +
+                 "viewer is looking.")]
+        public float radialFalloff = 0.28f;
+
+        [Tooltip("Blur radius at full strength, in screen heights. This is the actual " +
+                 "softness — raise it for a heavier lens.")]
+        public float radialMaxRadius = 0.045f;
+
+        [Tooltip("Extra margin around the loupe's projected circle kept fully sharp, in " +
+                 "screen heights. A little slack stops the rim of the footage catching the " +
+                 "very start of the ramp, which reads as the patch having a soft edge.")]
+        public float radialSharpMargin = 0.02f;
 
         // BOKEH IS RAMPED BY ITS OPTICS, NOT BY VOLUME WEIGHT.
         //
@@ -164,6 +182,39 @@ namespace CoralPolyps
         VolumeProfile _ownedProfile;
         DepthOfField _dof;
         bool _bokeh;
+        bool _radial;
+        Vector2 _lastCenter = new Vector2(0.5f, 0.5f);
+        float _lastInner;
+
+        /// <summary>
+        /// The radial path. Sharp inside the loupe's projected circle, softening outward —
+        /// which is the whole point of choosing it over Depth of Field, since the footage and
+        /// the coral it is painted on sit at identical depth and no depth-based effect can
+        /// ever tell them apart.
+        ///
+        /// The strength ramp is the same pure function of distance the other modes use, so
+        /// the blur is pinned to the hand exactly like the reveal is.
+        /// </summary>
+        void UpdateRadial()
+        {
+            float reveal = proximity != null ? Mathf.Clamp01(proximity.FullscreenReveal) : 0f;
+            bool covered = skipWhenFullyCovered && fullscreen != null && fullscreen.ScreenFullyCovered;
+
+            float t = Mathf.Clamp01(reveal / Mathf.Max(blurOnsetReveal, 0.01f));
+            Weight = covered ? 0f : Mathf.Clamp01(response.Evaluate(t)) * maxWeight;
+
+            // Hold the last circle when the loupe cannot be projected (behind the camera, or
+            // the target is lost and the transform is stale). Recomputing from a bad pose
+            // would swing the sharp region around the screen, which is far more visible than
+            // it being a frame or two out of date.
+            if (ProjectLoupe(out Vector2 c, out float r))
+            {
+                _lastCenter = c;
+                _lastInner = r + Mathf.Max(radialSharpMargin, 0f);
+            }
+
+            PushRadial(Weight, _lastCenter, _lastInner);
+        }
 
         void Awake()
         {
@@ -178,6 +229,18 @@ namespace CoralPolyps
             maxWeight = Mathf.Clamp01(cfg.magnifier_blur);
             blurOnsetReveal = Mathf.Clamp(cfg.magnifier_blur_onset, 0.01f, 1f);
             if (!string.IsNullOrWhiteSpace(cfg.magnifier_blur_mode)) mode = cfg.magnifier_blur_mode;
+
+            _radial = mode.Equals("radial", System.StringComparison.OrdinalIgnoreCase);
+
+            if (_radial)
+            {
+                // No volume, no Depth of Field, no depth texture. The whole effect is a
+                // fullscreen pass fed by the globals pushed in LateUpdate.
+                PushRadial(0f, new Vector2(0.5f, 0.5f), 0f);
+                Debug.Log("[defocus] radial blur — needs MagnifierBlurFeature on the URP " +
+                          "renderer asset; nothing will blur without it.");
+                return;
+            }
 
             if (volume == null) volume = Build();
             if (volume != null && volume.profile != null)
@@ -282,8 +345,52 @@ namespace CoralPolyps
             return _owned;
         }
 
+        static readonly int MagBlurID = Shader.PropertyToID("_MagBlur");
+        static readonly int MagBlurParamsID = Shader.PropertyToID("_MagBlurParams");
+        static readonly int MagBlurAspectID = Shader.PropertyToID("_MagBlurAspect");
+
+        /// <summary>
+        /// Publish the sharp circle and the blur strength for MagnifierBlurFeature. Globals
+        /// rather than a material reference: the renderer feature then never has to find a
+        /// scene object, and a scene with no defocus component simply leaves strength at 0,
+        /// where the shader early-outs and returns the frame untouched.
+        /// </summary>
+        void PushRadial(float strength, Vector2 center, float innerRadius)
+        {
+            float aspect = Screen.height > 0 ? (float)Screen.width / Screen.height : 0.5f;
+            Shader.SetGlobalVector(MagBlurID,
+                new Vector4(center.x, center.y, innerRadius, innerRadius + Mathf.Max(radialFalloff, 0.01f)));
+            Shader.SetGlobalVector(MagBlurParamsID, new Vector4(Mathf.Max(radialMaxRadius, 0f), strength, 0f, 0f));
+            Shader.SetGlobalFloat(MagBlurAspectID, aspect);
+        }
+
+        /// <summary>
+        /// The loupe's circle, projected to the screen in the mask's units (screen heights).
+        /// Measured with the camera's own up vector rather than derived from FOV, so it stays
+        /// correct through whatever projection Vuforia hands the camera — the same approach
+        /// FullscreenMagnifier uses for the iris, and for the same reason.
+        /// </summary>
+        bool ProjectLoupe(out Vector2 center, out float radius)
+        {
+            center = new Vector2(0.5f, 0.5f);
+            radius = 0f;
+
+            var cam = proximity != null ? proximity.cam : null;
+            if (cam == null) return false;
+
+            Vector3 vp = cam.WorldToViewportPoint(proximity.LoupeCenter);
+            if (vp.z <= 0f) return false;                 // behind the camera; keep the last values
+            center = new Vector2(vp.x, vp.y);
+
+            Vector3 edge = cam.WorldToViewportPoint(
+                proximity.LoupeCenter + cam.transform.up * Mathf.Max(proximity.LoupeRadius, 0f));
+            radius = Mathf.Abs(edge.y - vp.y);
+            return true;
+        }
+
         void LateUpdate()
         {
+            if (_radial) { UpdateRadial(); return; }
             if (volume == null) return;
 
             // Both this and FullscreenMagnifier run in LateUpdate, and they sit on the same
