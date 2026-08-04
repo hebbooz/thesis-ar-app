@@ -860,7 +860,9 @@ MonoBehaviour:
   appearance: {fileID: 1286615206}
   magnifier: {fileID: 1286615205}
   proximity: {fileID: 0}
+  defocus: {fileID: 0}
   visible: 1
+  showHostEditor: 0
 --- !u!114 &1286615205
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1261,6 +1263,7 @@ MonoBehaviour:
   cam: {fileID: 715359630}
   coralRoot: {fileID: 0}
   coralCollider: {fileID: 8596656868548670146}
+  fullscreen: {fileID: 0}
   magnifyStartDistance: 0.06
   magnifyFullDistance: 0.02
   maxMagnification: 1
@@ -1291,8 +1294,8 @@ MonoBehaviour:
   magnifyAnchor: 1
   loupeTargets:
   - {fileID: 1274010843}
-  loupeStartDistance: 0.22
-  loupeFullDistance: 0.13
+  loupeStartDistance: 0.3
+  loupeFullDistance: 0.17
   maxLoupeRadius: 0.03
   loupeCurve:
     serializedVersion: 2
@@ -1318,8 +1321,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  fullscreenStartDistance: 0.13
-  fullscreenFullDistance: 0.055
+  fullscreenStartDistance: 0.17
+  fullscreenFullDistance: 0.05
   fullscreenCurve:
     serializedVersion: 2
     m_Curve:
@@ -1335,34 +1338,27 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 1
       value: 1
-      inSlope: 2.5
-      outSlope: 0
+      inSlope: 2.901099
+      outSlope: 2.901099
       tangentMode: 0
       weightedMode: 0
-      inWeight: 0
+      inWeight: 0.054166675
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  takeoverLatchThreshold: 0.6
-  takeoverHoldMaxS: 8
-  takeoverReleaseS: 1
   implausibleFarM: 3
   implausibleJumpM: 0.15
-  poseRecoverS: 0.4
-  enterDwellS: 0.25
-  microExitDistance: 0.12
-  exitDwellS: 1
-  minStateS: 1
-  refractoryS: 1.5
-  logStateChanges: 1
-  relockStableS: 0.75
-  relockJitterM: 0.008
-  relockMaxWaitS: 3
-  fullscreen: {fileID: 0}
+  takeoverHoldMaxS: 8
+  takeoverReleaseS: 1
+  reacquireReconcileS: 0.25
   measureFromSurface: 1
-  distanceSmoothTime: 0.791
+  euroMinCutoff: 1
+  euroBeta: 1.5
+  euroDerivCutoff: 1
   configureMaterialForAR: 1
+  logStateChanges: 1
+  stateLogDwellS: 0.2
   useManualDistance: 0
   manualDistance: 1
 --- !u!64 &8596656868548670146

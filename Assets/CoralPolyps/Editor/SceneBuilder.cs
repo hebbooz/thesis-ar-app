@@ -379,10 +379,27 @@ namespace CoralPolyps
             // The span between start and full IS the emergence. 7.5 cm of travel reads
             // as a movement the hand is making; the 2.5 cm it replaces is a wrist twitch
             // that can only ever read as a cut, however well the mapping is pinned.
-            proximity.loupeStartDistance = 0.22f;
-            proximity.loupeFullDistance = 0.13f;
-            proximity.fullscreenStartDistance = 0.13f;   // == loupeFullDistance, no dead travel
-            proximity.fullscreenFullDistance = 0.055f;   // > Vuforia's ~5 cm give-up point
+            // WHICH END TO SPEND WHEN THE EMERGENCE FEELS TOO FAST.
+            //
+            // The near end is NOT a free parameter. Full coverage has to be reached before
+            // Vuforia drops the target, because that is the whole reason the dropout is
+            // invisible. Set fullscreenFullDistance inside the tracking limit and the reveal
+            // freezes partway when tracking dies — a frozen 80% iris with a blurred rim, and
+            // leaning closer cannot finish it, because there is no measurement left to
+            // finish it with. So it sits just outside the ~5 cm give-up point and no nearer.
+            //
+            // The FAR end is free. Moving fullscreenStartDistance outward lengthens the arc
+            // at no cost to anything. That is where to spend, and this revision spends 4 cm
+            // there against 5 mm at the near end: 12 cm of takeover travel, up from 7.5.
+            //
+            // ~5 cm is an estimate from Vuforia's behaviour on a ~10 cm Model Target, not a
+            // measurement of THIS print under THIS lighting. The HUD reports `vuforia
+            // trk/EXT` beside `cover`: if EXT ever appears before cover reads FULL, the real
+            // limit is further out than assumed and this number has to come back up.
+            proximity.loupeStartDistance = 0.30f;
+            proximity.loupeFullDistance = 0.17f;
+            proximity.fullscreenStartDistance = 0.17f;   // == loupeFullDistance, no dead travel
+            proximity.fullscreenFullDistance = 0.05f;    // at Vuforia's ~5 cm give-up point
 
             // ACCELERATING, not S-shaped. The default ease-in-out is slow at both ends and
             // fastest through the middle, which is wrong for a lens: approach should feel
