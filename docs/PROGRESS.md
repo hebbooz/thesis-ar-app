@@ -227,6 +227,17 @@ exists at `Assets/Resources/VuforiaModels/coral-rendering/`.
 - [ ] Final scrub of the full `_Stress` arc with the neon surge + septal detail.
 
 ### Phase 4 — The reveal mechanism (proximity IS zoom) ⭐ CODE DONE
+
+> **📍 REWORKED 2026-08-04 — read `docs/MAGNIFIER.md` before touching the reveal,
+> the arc timing or the blur.** The magnifier was rebuilt around one invariant
+> (*every arc is a pure function of distance; confidence acts on the input, never
+> the output*), the emergence arc was retimed against two hard constraints, and the
+> defocus became a screen-space radial pass because Depth of Field cannot separate
+> the loupe footage from the coral it is painted on. The state machine described
+> further down this section — dwells, hysteresis, refractory, re-lock gate — is
+> **gone on purpose**; reinstating any of it reintroduces the reported symptoms.
+> `MAGNIFIER.md` §8 is the pick-up list, and §7 is a **required manual setup step**
+> without which the blur silently does nothing.
 - [x] Added a **loupe reveal + AR transparency** to `FluorescentTissue`: fluorescence
       appears only inside a soft **world-space** sphere (`_LoupeCenter`/`_LoupeRadius`/
       `_LoupeSoftness`), and the tissue alpha-blends over the print — outside the loupe
@@ -409,6 +420,19 @@ not "works".
 
 ## Key decisions & gotchas (so they aren't re-litigated)
 
+- **The magnifier's reveal is a pure function of distance.** Confidence acts on the
+  measurement, never on the reveal. Every dwell/hysteresis/latch that once guarded the
+  reveal has been removed — they were applied to the wrong variable and produced
+  "polyps appear from nothing while holding still" and "pulling away does nothing,
+  then it cuts". Full reasoning in `docs/MAGNIFIER.md` §1.
+- **The takeover arc is pinned at both ends** — contiguous with the loupe (no dead
+  travel) and completing before Vuforia drops the target (~5 cm, *unverified*). The far
+  end is the free one to spend. `MAGNIFIER.md` §2.
+- **Depth of Field can never keep the loupe sharp** — the footage sits at identical
+  depth to the coral it is painted on. Hence the radial screen-space pass.
+  `MAGNIFIER.md` §3.
+- **`VideoPlayer.url` is a URL, not a path** — the space in "2026 University" broke it
+  silently, and only in the editor. `MAGNIFIER.md` §4.
 - **URP pipeline asset must stay assigned** (Graphics + all Quality levels) or the
   iOS build hits a shader-variant explosion. Re-check after any Unity upgrade.
 - **Unity 6.5 (Tech Stream), not LTS** — chosen to dodge a 6.4 ShaderGraph bug.

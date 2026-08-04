@@ -145,11 +145,18 @@ See `docs/FILE_DOCS.md` for per-file detail.
 - `PolypPool.cs` — runtime placement (stage 2)
 - `FluorescentPolyp.shader` — appearance + bleach arc (stage 3)
 - `ProximityRevealController.cs` — proximity → reveal + magnification (stage 4).
-  Reads iPad-to-coral distance, smooths it, and drives the loupe
-  (`PolypPool.SetLoupe`) plus the magnification arc. This is what makes the
-  "magnifying glass" work. **Its second arc — proximity → `_Stress` → bleaching —
-  is superseded** and is removed during installation integration: `_Stress` now
-  comes off the broadcast (`docs/CONTROL_INTEGRATION.md` §3.1 and §4).
+  Reads iPad-to-coral distance, smooths it, and drives the loupe plus the takeover
+  arc. This is what makes the "magnifying glass" work. **Its second arc — proximity
+  → `_Stress` → bleaching — is superseded** and was removed during installation
+  integration: `_Stress` now comes off the broadcast
+  (`docs/CONTROL_INTEGRATION.md` §3.1 and §4).
+  **Reworked 2026-08-04 — read `docs/MAGNIFIER.md` before changing it.** The reveal
+  is now a pure function of distance and the state machine that used to gate it is
+  deliberately gone.
+- `MagnifierDefocus.cs` + `MagnifierBlurFeature.cs` + `MagnifierRadialBlur.shader` —
+  everything outside the loupe falls out of focus as the polyps emerge. Needs a
+  one-time manual step on the URP renderer asset (`MAGNIFIER.md` §7) or it silently
+  does nothing.
 
 **Not yet built:**
 - All core code stages are built. Remaining work is assets (below).
