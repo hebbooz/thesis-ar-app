@@ -15,5 +15,8 @@
     "fluorescent": "fluorescent-microscale.mp4",
     "dead": "bleached-microscale.mp4"
   },
+  "_magnifier_blur_note": "blur 0..1 = how soft everything except the footage goes; onset = the reveal at which it reaches full and holds. Small onset means the screen is already soft while the opening is still one corallite wide.",
+  "magnifier_blur": 1.0,
+  "magnifier_blur_onset": 0.12,
   "hud_enabled": true
 }

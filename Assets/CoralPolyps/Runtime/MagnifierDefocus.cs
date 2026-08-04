@@ -61,18 +61,32 @@ namespace CoralPolyps
                  "inspector. Must NOT be the bloom volume.")]
         public Volume volume;
 
-        [Header("Response")]
-        [Tooltip("Blur at full takeover, 0..1. Modest is more convincing than heavy: the point " +
-                 "is that the surroundings stop competing for the eye, not that they vanish.")]
-        [Range(0f, 1f)] public float maxWeight = 0.85f;
+        // THE BLUR IS ESTABLISHED EARLY, NOT EARNED LATE.
+        //
+        // The first version ramped the blur alongside the reveal, so the screen only went
+        // soft once the footage was most of the way to covering it. That is backwards. A
+        // magnifying glass has a shallow depth of field the entire time it is held close —
+        // the surroundings are already gone when the magnified spot is still tiny. Ramping
+        // them together also made the takeover read as a change of shot, because everything
+        // changed at once; with the blur established first the footage arrives into a frame
+        // that is already behaving like a lens, and the transition stops being an event.
+        //
+        // So: full blur by the time the opening is roughly one corallite wide, held from
+        // there. Both numbers live in coral-ar.json — they are exactly the kind of thing
+        // that gets judged on a plinth and needs changing without a rebuild.
+        [Header("Response (defaults come from coral-ar.json)")]
+        [Tooltip("Blur at and beyond the onset, 0..1. Overwritten from config on Awake.")]
+        [Range(0f, 1f)] public float maxWeight = 1.0f;
 
-        [Tooltip("Shapes reveal (0 = footage entirely on the coral, 1 = footage fills the " +
-                 "screen) -> blur. Weighted late by default so the coral stays legibly sharp " +
-                 "through the loupe stage and only softens once the iris is genuinely opening. " +
-                 "To start the blur EARLIER, widen the takeover arc on the controller rather " +
-                 "than flattening this curve — that keeps blur and reveal telling one story.")]
-        public AnimationCurve response = new AnimationCurve(
-            new Keyframe(0f, 0f), new Keyframe(0.35f, 0.05f), new Keyframe(1f, 1f));
+        [Tooltip("The reveal at which the blur reaches maxWeight; it holds there for the rest " +
+                 "of the approach. Small on purpose — see the note above. Overwritten from " +
+                 "config on Awake.")]
+        [Range(0.01f, 1f)] public float blurOnsetReveal = 0.12f;
+
+        [Tooltip("Shapes the compressed onset ramp (0 at reveal 0, 1 at blurOnsetReveal). " +
+                 "Smooth by default so the softening arrives without a visible edge. This " +
+                 "shapes only the first sliver of the approach; past the onset it is held.")]
+        public AnimationCurve response = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
         [Tooltip("Drop the blur to zero once the footage covers every pixel. Free: by " +
                  "definition nothing behind it is visible, and this is the same test that " +
@@ -104,6 +118,14 @@ namespace CoralPolyps
         {
             if (proximity == null) proximity = FindAnyObjectByType<ProximityRevealController>();
             if (fullscreen == null) fullscreen = FindAnyObjectByType<FullscreenMagnifier>();
+
+            // Config wins over the inspector defaults. This component is added at runtime
+            // (SceneBuilder wires it, and FullscreenMagnifier adds it if a scene predates
+            // it), so inspector edits during Play do not persist — coral-ar.json is the
+            // only place a blur tweak survives a domain reload.
+            var cfg = CoralConfig.Shared;
+            maxWeight = Mathf.Clamp01(cfg.magnifier_blur);
+            blurOnsetReveal = Mathf.Clamp(cfg.magnifier_blur_onset, 0.01f, 1f);
 
             if (volume == null) volume = Build();
             if (volume != null && volume.profile != null)
@@ -202,7 +224,11 @@ namespace CoralPolyps
             float reveal = proximity != null ? Mathf.Clamp01(proximity.FullscreenReveal) : 0f;
             bool covered = skipWhenFullyCovered && fullscreen != null && fullscreen.ScreenFullyCovered;
 
-            Weight = covered ? 0f : Mathf.Clamp01(response.Evaluate(reveal)) * maxWeight;
+            // Compress the ramp into the first sliver of the reveal, then hold. Still a pure
+            // function of distance — the onset only decides how quickly the softening arrives,
+            // never that it arrives on its own.
+            float t = Mathf.Clamp01(reveal / Mathf.Max(blurOnsetReveal, 0.01f));
+            Weight = covered ? 0f : Mathf.Clamp01(response.Evaluate(t)) * maxWeight;
             volume.weight = Weight;
 
             // Volumes are not free even at weight 0 — the override still resolves and URP

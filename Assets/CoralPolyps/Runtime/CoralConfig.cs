@@ -85,6 +85,23 @@ namespace CoralPolyps
         public string magnifier_source = "placeholder";
         public MagnifierClips magnifier_clips = new MagnifierClips();
 
+        /// <summary>
+        /// How far out of focus everything except the footage goes, 0..1. A lens has a
+        /// shallow depth of field the whole time it is held close, so this wants to be
+        /// high — the surroundings should stop competing for the eye as soon as there is
+        /// anything to look into.
+        /// </summary>
+        public float magnifier_blur = 1.0f;
+
+        /// <summary>
+        /// The reveal at which the blur reaches full, 0..1. Small on purpose: the point is
+        /// that the screen is ALREADY soft while the opening is still one corallite wide,
+        /// which is what sells the magnification and what makes the takeover arrive as a
+        /// continuation rather than as a change of shot. Raising this toward 1 drags the
+        /// blur out across the whole approach and loses that.
+        /// </summary>
+        public float magnifier_blur_onset = 0.12f;
+
         public bool hud_enabled = true;
 
         /// <summary>Where this config was actually loaded from. Shown in the HUD:
