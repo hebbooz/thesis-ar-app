@@ -52,7 +52,7 @@ namespace CoralPolyps
         void Awake()
         {
             _cfg = CoralConfig.Shared;
-            if (listener == null) listener = FindFirstObjectByType<CoralOscListener>();
+            if (listener == null) listener = FindAnyObjectByType<CoralOscListener>();
         }
 
         void Start()

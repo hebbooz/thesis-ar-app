@@ -69,7 +69,7 @@ namespace CoralPolyps
         void Awake()
         {
             _cfg = CoralConfig.Shared;
-            if (listener == null) listener = FindFirstObjectByType<CoralOscListener>();
+            if (listener == null) listener = FindAnyObjectByType<CoralOscListener>();
 
             // The seam: which implementation is a config edit, never a code change.
             // If flipping magnifier_source ever requires touching code, the seam was

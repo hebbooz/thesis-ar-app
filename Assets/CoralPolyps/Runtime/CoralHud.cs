@@ -57,9 +57,9 @@ namespace CoralPolyps
 
         void Awake()
         {
-            if (listener == null) listener = FindFirstObjectByType<CoralOscListener>();
-            if (appearance == null) appearance = FindFirstObjectByType<CoralAppearance>();
-            if (magnifier == null) magnifier = FindFirstObjectByType<CoralMagnifier>();
+            if (listener == null) listener = FindAnyObjectByType<CoralOscListener>();
+            if (appearance == null) appearance = FindAnyObjectByType<CoralAppearance>();
+            if (magnifier == null) magnifier = FindAnyObjectByType<CoralMagnifier>();
             if (proximity == null) proximity = FindAnyObjectByType<ProximityRevealController>();
             if (defocus == null) defocus = FindAnyObjectByType<MagnifierDefocus>();
             if (!CoralConfig.Shared.hud_enabled) enabled = false;
