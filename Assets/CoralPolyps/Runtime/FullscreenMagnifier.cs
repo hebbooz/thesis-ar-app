@@ -152,6 +152,15 @@ namespace CoralPolyps
             if (proximity == null)
                 Debug.LogWarning($"[{nameof(FullscreenMagnifier)}] no ProximityRevealController — " +
                                  "the takeover will never open.", this);
+
+            // The defocus is part of the takeover, not an option beside it: an iris opening
+            // over a perfectly sharp coral reads as a video pasted on top, which is the whole
+            // failure it exists to fix. SceneBuilder adds it explicitly so it is visible in
+            // the hierarchy; this catches a scene built before it existed, so the feature
+            // does not depend on somebody remembering a drag.
+            if (GetComponent<MagnifierDefocus>() == null)
+                gameObject.AddComponent<MagnifierDefocus>();
+
             Build();
         }
 

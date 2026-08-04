@@ -466,21 +466,27 @@ namespace CoralPolyps
             {
                 _lastGoodRaw = rawDist;
 
-                float live = useManualDistance
-                    ? rawDist
-                    : (float.IsInfinity(_d)
-                        ? Prime(rawDist)
-                        : _euro.Filter(rawDist, dt, euroMinCutoff, euroBeta, euroDerivCutoff));
-
-                if (_heldFor > 0f)
+                bool returning = _heldFor > 0f;
+                if (returning)
                 {
                     // Coming back from a hold. Reconcile rather than jump: for the length of
                     // the gap we did not know where the hand was, and snapping the reveal to a
                     // new truth is the pop this rewrite exists to remove. Bounded and short.
+                    //
+                    // Prime the filter to the new measurement first. Its internal estimate is
+                    // stale by however long the gap lasted, and feeding that to Filter() would
+                    // read as an enormous velocity — the adaptive cutoff would go transparent
+                    // and hand back the raw value anyway, just less predictably. Priming says
+                    // the same thing on purpose: the reconciliation below owns this transition,
+                    // not the smoother.
                     _reconcileLeft = reacquireReconcileS;
                     _reconcileFrom = _d;
                     _heldFor = 0f;
                 }
+
+                float live = (useManualDistance || returning || float.IsInfinity(_d))
+                    ? Prime(rawDist)
+                    : _euro.Filter(rawDist, dt, euroMinCutoff, euroBeta, euroDerivCutoff);
 
                 if (_reconcileLeft > 0f)
                 {
@@ -504,21 +510,32 @@ namespace CoralPolyps
                 _heldFor += dt;
                 _reconcileLeft = 0f;
 
+                bool released = false;
                 if (_heldFor > takeoverHoldMaxS)
                 {
                     // Held long enough with no re-acquire: the visitor walked away rather than
-                    // leaned in. Drive `d` back OUTWARD so the reveal closes through the same
-                    // arc it opened through — the way in, played backwards — instead of
-                    // through a bespoke fade with its own timing and its own bugs.
+                    // leaned in, and nobody may be left staring at frozen polyps. Drive `d`
+                    // back OUTWARD rather than fading the reveal directly — the arcs stay the
+                    // only thing that decides what is on screen, so there is no second timing
+                    // path to keep in step with the first.
+                    //
+                    // The last of it does read as a fade rather than as the iris contracting
+                    // into the crater, because the geometry below is frozen and there is no
+                    // trustworthy world point left to contract toward. That is the honest
+                    // behaviour for "the target has been gone for eight seconds", and it is a
+                    // fallback the visitor should essentially never reach.
                     float span = Mathf.Max(loupeStartDistance - fullscreenFullDistance, 0.01f);
                     _d = Mathf.MoveTowards(_d, loupeStartDistance,
                                            span / Mathf.Max(takeoverReleaseS, 0.01f) * dt);
+                    released = _d >= loupeStartDistance - 1e-4f;
                 }
 
-                // Freeze the iris geometry too: the coral's transform is stale, so letting
+                // Freeze the iris geometry: the coral's transform is stale, so letting
                 // FullscreenMagnifier re-project from it would swing the opening around the
-                // screen for the length of the dropout — the flicker, by another route.
-                TakeoverHeld = true;
+                // screen for the length of the dropout — the flicker, by another route. Once
+                // the release has fully closed there is nothing left to freeze, and saying so
+                // keeps the HUD honest.
+                TakeoverHeld = !released;
 
                 // The teleport test compares against the last good frame. Re-acquiring
                 // somewhere genuinely far from where we left off is normal after a gap, so

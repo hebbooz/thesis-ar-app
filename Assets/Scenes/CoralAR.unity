@@ -939,7 +939,7 @@ MonoBehaviour:
   fullscreenShader: {fileID: 4800000, guid: b5a450959aa1d444aa079821439f947e, type: 3}
   irisEdgeSoftness: 0.22
   irisWorldRadiusStart: 0.004
-  irisWorldRadiusEnd: 0.04
+  irisWorldRadiusEnd: 0.07
   settleStartCoverage: 0.75
   coralEdgeMargin: 0.9
   clampReleaseCoverage: 0.8
@@ -1291,8 +1291,8 @@ MonoBehaviour:
   magnifyAnchor: 1
   loupeTargets:
   - {fileID: 1274010843}
-  loupeStartDistance: 0.2
-  loupeFullDistance: 0.12
+  loupeStartDistance: 0.22
+  loupeFullDistance: 0.13
   maxLoupeRadius: 0.03
   loupeCurve:
     serializedVersion: 2
@@ -1318,8 +1318,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  fullscreenStartDistance: 0.045
-  fullscreenFullDistance: 0.02
+  fullscreenStartDistance: 0.13
+  fullscreenFullDistance: 0.055
   fullscreenCurve:
     serializedVersion: 2
     m_Curve:

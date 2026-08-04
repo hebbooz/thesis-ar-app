@@ -33,9 +33,13 @@ namespace CoralPolyps
         [Tooltip("The magnifier layer, for the APPLIED half of the readout. Optional.")]
         public CoralMagnifier magnifier;
 
-        [Tooltip("The magnification state machine, for the transition diagnostics block. " +
+        [Tooltip("The proximity controller, for the magnifier diagnostics block. " +
                  "Found in the scene if left empty.")]
         public ProximityRevealController proximity;
+
+        [Tooltip("The defocus layer, so the blur can be read off the same line as the reveal " +
+                 "that drives it. Optional; found in the scene if left empty.")]
+        public MagnifierDefocus defocus;
 
         [Tooltip("Visible on launch. Toggle any time with a three-finger tap (or H in the editor). " +
                  "Set hud_enabled:false in coral-ar.json to disable it entirely for the exhibition.")]
@@ -57,6 +61,7 @@ namespace CoralPolyps
             if (appearance == null) appearance = FindFirstObjectByType<CoralAppearance>();
             if (magnifier == null) magnifier = FindFirstObjectByType<CoralMagnifier>();
             if (proximity == null) proximity = FindAnyObjectByType<ProximityRevealController>();
+            if (defocus == null) defocus = FindAnyObjectByType<MagnifierDefocus>();
             if (!CoralConfig.Shared.hud_enabled) enabled = false;
         }
 
@@ -188,6 +193,7 @@ namespace CoralPolyps
             $"cover {(proximity.fullscreen != null ? proximity.fullscreen.ScreenCoverage01 : -1f):F2} " +
             $"{(proximity.fullscreen != null && proximity.fullscreen.ScreenFullyCovered ? "FULL" : "partial")}   " +
             $"loupe {proximity.LoupeRadius * 1000f:F0}mm   x{proximity.Magnification:F1}   " +
+            $"blur {(defocus != null ? $"{defocus.Weight:F2}" : "-")}   " +
             $"vuforia {(proximity.VuforiaTracked ? "trk" : "EXT")}";
 
         /// <summary>

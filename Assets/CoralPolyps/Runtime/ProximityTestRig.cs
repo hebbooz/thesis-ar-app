@@ -64,11 +64,16 @@ namespace CoralPolyps
 
             if (controller == null) return;
 
+            // Bracket the arcs that are actually in play: the loupe opening at the far end,
+            // the takeover completing at the near end. The magnify arc is deliberately left
+            // out — maxMagnification is 1 (registration beats zoom), so including its 2 cm
+            // full-distance only stretched the slider into 4 cm of travel where everything
+            // is long since saturated, compressing the part worth scrubbing.
             float far = autoRange
                 ? Mathf.Max(controller.loupeStartDistance, controller.magnifyStartDistance) * 1.1f
                 : farDistance;
             float near = autoRange
-                ? Mathf.Max(Mathf.Min(controller.loupeFullDistance, controller.magnifyFullDistance) * 0.7f, 0.01f)
+                ? Mathf.Max(controller.fullscreenFullDistance * 0.7f, 0.01f)
                 : nearDistance;
 
             currentDistance = Mathf.Lerp(far, near, proximity);

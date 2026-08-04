@@ -349,9 +349,49 @@ namespace CoralPolyps
             // print. Left at 1 deliberately — raise it only as a considered trade.
             proximity.maxMagnification = 1f;
 
+            // THE ARC. Set here rather than left to the scene, because the numbers are
+            // not free parameters — two hard constraints pin them:
+            //
+            //   1. CONTIGUOUS. The takeover must begin exactly where the loupe finishes.
+            //      The previous tuning left 7.5 cm of dead travel between them (loupe
+            //      done at 12 cm, takeover starting at 4.5 cm) in which the viewer moved
+            //      and nothing changed at all — which teaches them that moving does
+            //      nothing, and makes the eventual onset read as an event that happened
+            //      TO them rather than something they were driving.
+            //
+            //   2. FULL COVER BEFORE TRACKING DIES. Vuforia gives up on a ~10 cm Model
+            //      Target somewhere around 5 cm, so the takeover has to be total by then
+            //      or the dropout happens in plain view. The previous tuning had the
+            //      whole takeover arc (4.5 -> 2 cm) sitting INSIDE that range: tracking
+            //      was already gone before the footage started covering anything, which
+            //      is most of where the strobing at closest range came from. Finishing
+            //      at 5.5 cm puts the failure safely behind an opaque screen.
+            //
+            // The span between start and full IS the emergence. 7.5 cm of travel reads
+            // as a movement the hand is making; the 2.5 cm it replaces is a wrist twitch
+            // that can only ever read as a cut, however well the mapping is pinned.
+            proximity.loupeStartDistance = 0.22f;
+            proximity.loupeFullDistance = 0.13f;
+            proximity.fullscreenStartDistance = 0.13f;   // == loupeFullDistance, no dead travel
+            proximity.fullscreenFullDistance = 0.055f;   // > Vuforia's ~5 cm give-up point
+
             fullscreen.proximity = proximity;
             proximity.fullscreen = fullscreen;   // so the coral is hidden on REAL coverage
+
+            // The iris has to be able to outgrow the screen at the distance the arc now
+            // finishes. At 5.5 cm a 4 cm world radius projects to roughly the corner
+            // distance, which leaves the opaque core short of it and the screen edges
+            // permanently inside the soft rim. 7 cm clears it with margin.
+            fullscreen.irisWorldRadiusEnd = 0.07f;
+
+            // Everything except the footage falls out of focus as the polyps emerge.
+            // Builds its own DoF volume, so there is nothing to wire in the scene.
+            var defocus = control.AddComponent<MagnifierDefocus>();
+            defocus.proximity = proximity;
+            defocus.fullscreen = fullscreen;
+
             hud.proximity = proximity;
+            hud.defocus = defocus;
         }
 
         /// <summary>
