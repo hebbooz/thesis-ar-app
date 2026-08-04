@@ -113,7 +113,50 @@ namespace CoralPolyps
                 Debug.LogWarning($"[{nameof(MagnifierDefocus)}] no DepthOfField on the assigned " +
                                  "volume — the blur will do nothing.", this);
 
+            RequireCameraDepth();
+
             if (volume != null) volume.weight = 0f;
+        }
+
+        /// <summary>
+        /// Gaussian Depth of Field derives its circle of confusion from _CameraDepthTexture.
+        /// Without one the CoC resolves to nothing and the whole pass is a silent no-op —
+        /// no error, no warning, just a volume at full weight doing visibly nothing, which
+        /// is a genuinely horrible thing to debug from a gallery floor.
+        ///
+        /// The camera was set to UsePipelineSettings and Mobile_RPAsset has the depth texture
+        /// off (reasonably — it is a mobile profile and nothing else here needed it). Claiming
+        /// the requirement on the CAMERA rather than flipping it in the pipeline asset keeps
+        /// the cost attached to the feature that wants it, survives a change of quality level,
+        /// and cannot be undone by someone tidying the render pipeline settings.
+        ///
+        /// Also checks post-processing is actually on, because that is the other way for this
+        /// to fail completely while looking correctly configured.
+        /// </summary>
+        void RequireCameraDepth()
+        {
+            var cam = proximity != null ? proximity.cam : Camera.main;
+            if (cam == null)
+            {
+                Debug.LogWarning($"[{nameof(MagnifierDefocus)}] no camera found — cannot confirm " +
+                                 "the depth texture, and the blur may silently do nothing.", this);
+                return;
+            }
+
+            var data = cam.GetUniversalAdditionalCameraData();
+            if (data == null) return;
+
+            if (!data.requiresDepthTexture)
+            {
+                data.requiresDepthTexture = true;
+                Debug.Log($"[defocus] enabled the depth texture on '{cam.name}' — Gaussian DoF " +
+                          "cannot compute a circle of confusion without it.");
+            }
+
+            if (!data.renderPostProcessing)
+                Debug.LogWarning($"[{nameof(MagnifierDefocus)}] post-processing is OFF on " +
+                                 $"'{cam.name}' — the blur (and the bloom the fluorescent " +
+                                 "tissue depends on) will not render.", this);
         }
 
         /// <summary>

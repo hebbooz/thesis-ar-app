@@ -293,7 +293,16 @@ namespace CoralPolyps
             {
                 cam.tag = "MainCamera";
                 // Post-processing must be on for the bloom volume to do anything.
-                cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
+                var camData = cam.GetUniversalAdditionalCameraData();
+                camData.renderPostProcessing = true;
+
+                // And the depth texture for MagnifierDefocus: Gaussian DoF derives its circle
+                // of confusion from _CameraDepthTexture, and Mobile_RPAsset has it off. Left
+                // on UsePipelineSettings the blur is a silent no-op — full weight, no error,
+                // nothing on screen. Claimed on the camera rather than in the pipeline asset
+                // so the cost stays attached to the feature and survives a quality-level
+                // change. MagnifierDefocus also asserts this at runtime.
+                camData.requiresDepthTexture = true;
             }
             else
             {
