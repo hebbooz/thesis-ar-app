@@ -1335,7 +1335,7 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 1
       value: 1
-      inSlope: 0
+      inSlope: 2.5
       outSlope: 0
       tangentMode: 0
       weightedMode: 0

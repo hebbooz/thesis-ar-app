@@ -375,6 +375,25 @@ namespace CoralPolyps
             proximity.fullscreenStartDistance = 0.13f;   // == loupeFullDistance, no dead travel
             proximity.fullscreenFullDistance = 0.055f;   // > Vuforia's ~5 cm give-up point
 
+            // ACCELERATING, not S-shaped. The default ease-in-out is slow at both ends and
+            // fastest through the middle, which is wrong for a lens: approach should feel
+            // like it is drawing you in, gaining rather than easing off.
+            //
+            // It bites hardest at the START, because this curve also drives the iris world
+            // radius (4 mm -> 70 mm). Linear, a tenth of the way along the arc has already
+            // nearly tripled the magnified spot — so the first small lean does most of the
+            // visible work and the rest of the approach has little left to give. Flat here
+            // keeps the opening at roughly one corallite for the first half of the travel,
+            // which is also the reading the piece wants: you are looking into a single cup
+            // until you commit.
+            //
+            // Zero outgoing tangent at 0, steep incoming tangent at 1 — a quadratic-ish
+            // ease-in. Raise the 2.5 for more bite; it is a plain AnimationCurve, so it can
+            // be dragged in the Inspector without touching this file.
+            proximity.fullscreenCurve = new AnimationCurve(
+                new Keyframe(0f, 0f, 0f, 0f),
+                new Keyframe(1f, 1f, 2.5f, 0f));
+
             fullscreen.proximity = proximity;
             proximity.fullscreen = fullscreen;   // so the coral is hidden on REAL coverage
 
