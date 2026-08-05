@@ -940,7 +940,7 @@ MonoBehaviour:
   proximity: {fileID: 0}
   fullscreenShader: {fileID: 4800000, guid: b5a450959aa1d444aa079821439f947e, type: 3}
   irisEdgeSoftness: 0.22
-  irisWorldRadiusStart: 0.004
+  irisWorldRadiusStart: 0.0018
   irisWorldRadiusEnd: 0.07
   settleStartCoverage: 0.75
   coralEdgeMargin: 0.9
@@ -1352,6 +1352,10 @@ MonoBehaviour:
   takeoverHoldMaxS: 8
   takeoverReleaseS: 1
   reacquireReconcileS: 0.25
+  corallites: {fileID: 11400000, guid: 43ec425a57ce6496b8f921507f1cce29, type: 2}
+  pinToCorallite: 1
+  repickViewportMargin: 0.42
+  repickMaxReveal: 0.25
   measureFromSurface: 1
   euroMinCutoff: 1
   euroBeta: 1.5

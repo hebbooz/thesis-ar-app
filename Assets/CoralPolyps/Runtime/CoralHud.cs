@@ -194,6 +194,10 @@ namespace CoralPolyps
             $"{(proximity.fullscreen != null && proximity.fullscreen.ScreenFullyCovered ? "FULL" : "partial")}   " +
             $"loupe {proximity.LoupeRadius * 1000f:F0}mm   x{proximity.Magnification:F1}   " +
             $"blur {(defocus != null ? $"{defocus.Weight:F2}" : "-")}   " +
+            // Which cup the polyps are emerging from. "free" means the loupe is still
+            // aim-following; a number that CHANGES while leaning in is the pin thrashing,
+            // which would look exactly like the sliding it exists to stop.
+            $"pin {(proximity.PinnedIndex >= 0 ? $"#{proximity.PinnedIndex}" : "free")}   " +
             $"vuforia {(proximity.VuforiaTracked ? "trk" : "EXT")}";
 
         /// <summary>

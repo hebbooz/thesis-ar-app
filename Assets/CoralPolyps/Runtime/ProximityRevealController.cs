@@ -87,6 +87,41 @@ namespace CoralPolyps
                  "falls back to the nearest point on the coral's bounds.")]
         public Collider coralCollider;
 
+        // THE POLYPS EMERGE FROM A CUP, NOT FROM THE CROSSHAIR.
+        //
+        // Without this the loupe centre is re-derived every frame from a ray through the
+        // screen centre — so it is not a crater at all, it is a cursor. Move the iPad
+        // sideways while leaning in and the emergence point tracks ACROSS the coral,
+        // which reads as footage sliding over the skeleton rather than as something
+        // coming out of it. That is the single biggest thing standing between this and
+        // the magnifying-glass illusion.
+        //
+        // The baked map is what makes the fix cheap: 457 corallites in mesh-local space,
+        // already detected, already committed, and until now loaded by nothing (PolypPool
+        // is shelved). Latching stores an INDEX into it, and the world point is recomputed
+        // from the coral's transform each frame — so the pin rides the tracked coral for
+        // free and needs no registration logic of its own.
+        //
+        // The shader's cup/ridge colour split is NOT usable for this: it is an AO texture
+        // read per fragment, so it can shade a cup but cannot answer "where is one".
+        [Header("Corallite pinning")]
+        [Tooltip("The baked corallite map. Without it the loupe falls back to the old " +
+                 "per-frame raycast and the emergence point slides as the viewer moves.")]
+        public PolypScatterMap corallites;
+
+        [Tooltip("Pin as the takeover begins. Before that the loupe follows the aim, so the " +
+                 "visitor explores the surface and only then commits to a cup.")]
+        public bool pinToCorallite = true;
+
+        [Tooltip("Re-pick a cup if the pinned one drifts this far outside the viewport " +
+                 "(0.5 = the frame edge) — but only below repickMaxReveal. Above that the " +
+                 "iris is large, its centre barely matters, and a jump would be obvious.")]
+        public float repickViewportMargin = 0.42f;
+
+        [Tooltip("Reveal above which the pin is never re-picked. Once the footage is opening " +
+                 "in earnest, a changed anchor is far worse than an off-centre one.")]
+        [Range(0f, 1f)] public float repickMaxReveal = 0.25f;
+
         [Tooltip("The takeover layer, asked whether the screen is ACTUALLY covered before the " +
                  "coral is ever hidden. Found in the scene if left empty; without it the " +
                  "controller falls back to the distance-derived reveal, which over-reports " +
@@ -260,6 +295,11 @@ namespace CoralPolyps
         /// <summary>Current loupe centre in WORLD space (the point the viewer is peering at).</summary>
         public Vector3 LoupeCenter { get; private set; }
 
+        /// <summary>Index into the scatter map of the corallite the polyps are emerging from,
+        /// or -1 while the loupe is still free-aimed. Shown in the HUD: "which cup am I in?"
+        /// is the first question when the emergence looks wrong.</summary>
+        public int PinnedIndex { get; private set; } = -1;
+
         /// <summary>Current loupe radius in world metres; 0 means shut.</summary>
         public float LoupeRadius { get; private set; }
 
@@ -327,6 +367,12 @@ namespace CoralPolyps
         private Quaternion _confidentRot;
         private bool _haveConfidentPose;
 
+        // The transform the scatter map's local space belongs to — the mesh's own, which is
+        // not necessarily coralRoot (SceneBuilder puts the renderer on a child). Resolved
+        // once in Start rather than assumed, because getting this wrong offsets every pin by
+        // whatever that child transform happens to be, silently.
+        private Transform _pinSpace;
+
         // Label debounce. Purely cosmetic: it delays what the log and the HUD SAY, never what
         // the screen does.
         private MagState _pendingLabel = MagState.Meso;
@@ -385,6 +431,11 @@ namespace CoralPolyps
             _baseLocalPos = _root.localPosition;
             _baseLocalScale = _root.localScale;
             _haveBase = true;
+
+            // The map is in the MESH's local space, which is the renderer's transform — not
+            // coralRoot, which may be a parent carrying the alignment offset.
+            _pinSpace = coralRenderer.transform;
+            ValidatePin();
 
             // Subscribe to the tracker's own verdict. The coral hangs under the Model Target,
             // so its ObserverBehaviour is in the parents.
@@ -582,6 +633,7 @@ namespace CoralPolyps
                 FullscreenReveal = 0f;
                 Magnification = 1f;
                 LoupeCenter = center;
+                PinnedIndex = -1;      // nothing measured yet; commit to no cup
                 PushLoupe();
                 SetCoralHidden(false);
                 UpdateLabel(dt, d);
@@ -619,8 +671,11 @@ namespace CoralPolyps
             float lt = InvLerpClamped(loupeStartDistance, loupeFullDistance, d);
             LoupeRadius = maxLoupeRadius * Mathf.Clamp01(loupeCurve.Evaluate(lt));
             // While held, keep the last centre: the raycast would be against a stale or
-            // disabled collider and would wander.
-            if (!TakeoverHeld) LoupeCenter = FindLoupeCenter(center);
+            // disabled collider and would wander. A PINNED centre is safe to keep
+            // recomputing — it comes off the coral's own transform, which is frozen too, so
+            // it stays exactly where it was rather than being re-solved from a bad pose.
+            if (!TakeoverHeld) LoupeCenter = UpdatePin(FindLoupeCenter(center), d);
+            else if (PinnedIndex >= 0) LoupeCenter = PinWorld();
             PushLoupe();
 
             // --- Takeover: past the loupe, the footage leaves the coral entirely ---
@@ -739,6 +794,9 @@ namespace CoralPolyps
         /// window follows the aim rather than sitting on a fixed spot. Falls back to the
         /// nearest point on the bounds (no collider, or aimed off the coral) and finally to the
         /// bounds centre, so it degrades rather than jumping to the origin.
+        ///
+        /// This is the FREE-AIM answer. Once a cup is pinned it is overridden — see
+        /// <see cref="UpdatePin"/>.
         /// </summary>
         private Vector3 FindLoupeCenter(Vector3 boundsCenter)
         {
@@ -749,6 +807,123 @@ namespace CoralPolyps
             }
             if (!useManualDistance) return coralRenderer.bounds.ClosestPoint(cam.transform.position);
             return boundsCenter;
+        }
+
+        /// <summary>
+        /// Decide where the loupe is centred: a free-aimed point while the viewer is still
+        /// exploring, a specific corallite once they commit.
+        ///
+        /// The latch snaps the AIM POINT to the nearest baked cup rather than searching the
+        /// map against the view ray, and that choice does most of the work. The raycast has
+        /// already established a point that is visible, unoccluded and front-facing; a
+        /// nearest-neighbour lookup from there inherits all three for free, where a ray-vs-map
+        /// search would have to rediscover them and would happily pin a cup on the far side
+        /// of the dome.
+        ///
+        /// The snap is imperceptible by construction: it can move the centre by at most half
+        /// the corallite pitch (~2.1 mm on this bake), and it happens at the instant the iris
+        /// is 3-4 mm across and barely on screen.
+        /// </summary>
+        private Vector3 UpdatePin(Vector3 aimPoint, float d)
+        {
+            if (!pinToCorallite || corallites == null || corallites.Count == 0 || useManualDistance)
+            {
+                PinnedIndex = -1;
+                return aimPoint;
+            }
+
+            // Release on the way out, with hysteresis, so the next approach chooses afresh
+            // rather than inheriting whichever cup the last visitor happened to commit to.
+            if (PinnedIndex >= 0 && d > fullscreenStartDistance * 1.12f)
+                PinnedIndex = -1;
+
+            bool wantLatch = PinnedIndex < 0 && d <= fullscreenStartDistance;
+
+            // Has the pinned cup wandered out of frame? Only worth fixing while the opening
+            // is still small; past repickMaxReveal a changed anchor is more visible than an
+            // off-centre one, which is the whole reason the pin matters least when large.
+            if (!wantLatch && PinnedIndex >= 0 && FullscreenReveal <= repickMaxReveal)
+            {
+                Vector3 vp = cam.WorldToViewportPoint(PinWorld());
+                if (vp.z <= 0f ||
+                    Mathf.Abs(vp.x - 0.5f) > repickViewportMargin ||
+                    Mathf.Abs(vp.y - 0.5f) > repickViewportMargin)
+                    wantLatch = true;
+            }
+
+            if (wantLatch)
+            {
+                int found = NearestCorallite(aimPoint);
+                if (found >= 0)
+                {
+                    PinnedIndex = found;
+                    if (logStateChanges)
+                        Debug.Log($"[magnify] pinned corallite #{found} at d={d:F3}m");
+                }
+            }
+
+            return PinnedIndex >= 0 ? PinWorld() : aimPoint;
+        }
+
+        /// <summary>The pinned cup in WORLD space, recomputed from the coral's transform each
+        /// frame so it rides the tracked object with no registration work of its own.</summary>
+        private Vector3 PinWorld() =>
+            _pinSpace.TransformPoint(corallites.corallites[PinnedIndex].localPosition);
+
+        /// <summary>
+        /// Nearest baked cup to a world point. 457 entries scanned on latch only — a few
+        /// microseconds, once, at a moment nothing else is happening.
+        /// </summary>
+        private int NearestCorallite(Vector3 worldPoint)
+        {
+            Vector3 local = _pinSpace.InverseTransformPoint(worldPoint);
+            var list = corallites.corallites;
+
+            int best = -1;
+            float bestSqr = float.PositiveInfinity;
+            for (int i = 0; i < list.Count; i++)
+            {
+                float sqr = (list[i].localPosition - local).sqrMagnitude;
+                if (sqr >= bestSqr) continue;
+                bestSqr = sqr;
+                best = i;
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Is this map actually this coral? sourceMeshName is "default" on the committed bake
+        /// and would match anything, so it is worthless as a guard. Comparing the baked bounds
+        /// against the live mesh's is not — a map baked from a different scan, or from a mesh
+        /// at a different import scale, shows up immediately as an extent mismatch. A wrong
+        /// map is not a crash, it is polyps pinned to cups that are not physically there,
+        /// which CLAUDE.md §3 calls the single worst failure at loupe range.
+        /// </summary>
+        private void ValidatePin()
+        {
+            if (corallites == null || _pinSpace == null) return;
+
+            var filter = _pinSpace.GetComponent<MeshFilter>();
+            Mesh mesh = filter != null ? filter.sharedMesh : null;
+            if (mesh == null)
+            {
+                Debug.LogWarning($"[{nameof(ProximityRevealController)}] no MeshFilter beside the " +
+                                 "coral renderer — cannot verify the scatter map belongs to this " +
+                                 "mesh. Pinning will still run.", this);
+                return;
+            }
+
+            Vector3 baked = corallites.sourceBounds.extents;
+            Vector3 live = mesh.bounds.extents;
+            float err = (baked - live).magnitude / Mathf.Max(live.magnitude, 1e-4f);
+            if (err > 0.02f)
+                Debug.LogError($"[{nameof(ProximityRevealController)}] scatter map does not match " +
+                               $"this mesh: baked extents {baked} vs mesh {live} ({err:P0} off). " +
+                               "Polyps will pin to cups that are not physically there — re-bake " +
+                               "with CoralliteBaker before trusting the loupe.", this);
+            else
+                Debug.Log($"[magnify] scatter map ok — {corallites.Count} corallites, " +
+                          $"extents match within {err:P1}");
         }
 
         private void PushLoupe()

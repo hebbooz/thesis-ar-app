@@ -1,6 +1,7 @@
 # MAGNIFIER.md — the reveal, the arc, and the blur
 
-_Written 2026-08-04. Covers the magnifier rework from commit `c32038c` to `2604bc9`._
+_Written 2026-08-04, extended 2026-08-05 with §3b (corallite pinning)._
+_Covers the magnifier rework from commit `c32038c` onward._
 
 The decisions behind how the polyps emerge, why each one was made, and which are
 still assumptions. Work on this was paused mid-refinement — **§8 is the list of what
@@ -195,6 +196,58 @@ range the device is hottest.
 
 ---
 
+## 3b. Pinning the emergence to a corallite
+
+**The problem.** `LoupeCenter` was re-derived every frame from a ray through the screen
+centre — so it was never a crater, it was a cursor. Moving the iPad sideways while
+leaning in tracked the emergence point *across* the coral, which reads as footage
+sliding over the skeleton rather than something coming out of it.
+
+**What it pins to.** `PolypScatterMap.asset` — 457 corallites in mesh-local space,
+already baked, and until now loaded by nothing (`PolypPool` is shelved). Note the
+shader's cup/ridge colour split is *not* usable for this: it is an AO texture read per
+fragment, so it can shade a cup but cannot answer "where is one".
+
+**Lifecycle.**
+
+```
+d > 0.17 m      FREE AIM   raycast through screen centre — the visitor explores
+d crosses 0.17  LATCH      snap that hit to the nearest baked cup, store the INDEX
+d < 0.17 m      PINNED     LoupeCenter = meshTransform.TransformPoint(cup.localPosition)
+d > ~0.19 m     RELEASE    next approach chooses afresh
+```
+
+Storing an **index into mesh-local space** is the whole trick: the world point is
+recomputed from the coral's transform each frame, so the pin rides the tracked coral
+with no registration logic of its own, and freezes correctly when the pose is held.
+
+**Why latch from the raycast hit** rather than searching the map against the view ray:
+the raycast has already established a point that is visible, unoccluded and
+front-facing, and a nearest-neighbour lookup inherits all three for free. A ray-vs-map
+search would have to rediscover them and would happily pin a cup on the far side of
+the dome.
+
+**Why the latch is invisible:** it can move the centre by at most half the corallite
+pitch — ~2.1 mm on this bake — at the instant the iris is under 4 mm and barely drawn.
+
+**Re-picking** is allowed only below `repickMaxReveal` (0.25) if the pinned cup drifts
+past `repickViewportMargin` of the frame. Above that the iris is large, its centre
+barely matters, and a changed anchor would be far more visible than an off-centre one.
+
+**`irisWorldRadiusStart` was corrected 0.003 → 0.0018** as part of this. The old value
+was justified by "a Goniastrea corallite is roughly 8 mm across", but the baked map for
+*this* scan has a 4.2 mm median pitch — so a 6 mm opening straddled two or three cups at
+the exact moment it claimed to be inside one. Survivable while the centre was a free
+cursor; a contradiction once it pins.
+
+**`sourceMeshName` is a worthless guard** — the committed bake says `default`, which
+matches anything. `ValidatePin()` compares baked `sourceBounds` against the live mesh
+extents instead and errors above 2% mismatch. A wrong map is not a crash; it is polyps
+pinned to cups that are not physically there, which `CLAUDE.md` §3 calls the single
+worst failure at loupe range.
+
+---
+
 ## 4. The video
 
 **A filesystem path is not a URL, and `VideoPlayer.url` parses it as one.** This
@@ -303,7 +356,18 @@ the field is still empty.
   All-day thermals is risk #5 in `CLAUDE.md`. The depth texture also adds a prepass for
   the DoF modes.
 
+- **The pin has not been judged on device.** Watch `pin #n` on the HUD: a number that
+  *changes* while leaning in is the pin thrashing, which would look exactly like the
+  sliding it exists to stop.
+
 **Known-incomplete**
+
+- **`confidence` in the scatter map is unusable as a quality gate.** All 457 entries
+  fall between 0.06 and 0.181 (median 0.102) — nothing above 0.2, so no absolute
+  threshold can separate good detections from bad. Either `CoralliteBaker`'s
+  normalisation is wrong or every detection is weak. The pin currently ignores the
+  field entirely and takes the geometrically nearest cup. Worth a look at the baker
+  before relying on confidence for anything.
 
 - **The pacing was tuned against still images.** The video was not playing for the
   whole period the arc length and curve were being judged. Moving footage carries
@@ -336,5 +400,7 @@ the field is still empty.
 | `3b6372a` | Make the blur arrive gradually instead of stepping in |
 | `0e9d0e8` | Radial blur: keep the loupe sharp, soften outward from its rim |
 | `2604bc9` | Fix build: bokehApertureStart referenced after being removed |
+| `0423945` | Document the magnifier rework: decisions, constraints, and what is left |
+| _(this)_  | Pin the emergence to a corallite instead of the crosshair |
 
 Each message carries the reasoning for its own change; this document is the synthesis.

@@ -54,6 +54,7 @@ namespace CoralPolyps
         const string CoralMaterialPath = "Assets/CoralPolyps/Coral/CoralTissue.mat";
         const string MagnifierMaterialPath = "Assets/CoralPolyps/Coral/MagnifierLoupe.mat";
         const string BloomProfilePath = "Assets/CoralPolyps/CoralBloomProfile.asset";
+        const string ScatterMapPath = "Assets/CoralPolyps/PolypScatterMap.asset";
         const string MagnifierShader = "CoralPolyps/MagnifierLoupe";
         const string FullscreenShaderPath = "Assets/CoralPolyps/Runtime/MagnifierFullscreen.shader";
 
@@ -428,6 +429,24 @@ namespace CoralPolyps
             // distance, which leaves the opaque core short of it and the screen edges
             // permanently inside the soft rim. 7 cm clears it with margin.
             fullscreen.irisWorldRadiusEnd = 0.07f;
+
+            // AND THE OPENING MUST FIT IN ONE CUP. The old 0.003 (a 6 mm opening) was
+            // justified by "a Goniastrea corallite is roughly 8 mm across" — but the baked
+            // map for THIS scan has a median nearest-neighbour pitch of 4.2 mm, so a 6 mm
+            // opening straddles two or three cups at the exact moment it is supposed to sit
+            // inside one. That was survivable while the centre was a free-aimed cursor; now
+            // that the reveal pins to a specific corallite, an opening wider than the cup
+            // contradicts the claim it is making.
+            fullscreen.irisWorldRadiusStart = 0.0018f;
+
+            // The pin itself. Without the map the loupe silently falls back to the old
+            // per-frame raycast, which is the sliding behaviour, so a missing asset is
+            // worth a loud line rather than a shrug.
+            var scatter = AssetDatabase.LoadAssetAtPath<PolypScatterMap>(ScatterMapPath);
+            if (scatter != null) proximity.corallites = scatter;
+            else _manual.Add($"{ScatterMapPath} not found — assign a PolypScatterMap to " +
+                             "ProximityRevealController, or the polyps will not pin to a cup " +
+                             "and the emergence point will slide as the viewer moves.");
 
             // Everything except the footage falls out of focus as the polyps emerge.
             // Builds its own DoF volume, so there is nothing to wire in the scene.
