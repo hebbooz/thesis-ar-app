@@ -99,6 +99,8 @@ namespace CoralPolyps
                 requiresIntermediateTexture = true;
             }
 
+            bool _loggedSize;
+
             public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
             {
                 if (_mat == null) return;
@@ -109,11 +111,47 @@ namespace CoralPolyps
                 TextureHandle source = resources.activeColorTexture;
                 if (!source.IsValid()) return;
 
-                // Same format and size as the source, no depth: this is a colour-only copy.
+                // Same format as the source, no depth: this is a colour-only copy.
                 var desc = renderGraph.GetTextureDesc(source);
                 desc.name = "MagnifierRadialBlur";
                 desc.clearBuffer = false;
                 desc.depthBufferBits = 0;
+
+                // SIZE THE COPY FROM THE CAMERA, NOT FROM THE INHERITED DESC.
+                //
+                // A device build died on boot trying to allocate 0x6F2000000 bytes — ~28 GB,
+                // and exactly 16 MB-aligned, which is the signature of a size computed from a
+                // garbage dimension rather than of real memory pressure. Whatever the
+                // inherited desc reports (an imported handle, a scaled size mode, an
+                // uninitialised extent), the copy only ever wants the camera's own pixel
+                // dimensions, so state them instead of trusting them.
+                var cameraData = frameData.Get<UniversalCameraData>();
+                int w = cameraData.cameraTargetDescriptor.width;
+                int h = cameraData.cameraTargetDescriptor.height;
+
+                // Bail rather than ask for something absurd. A missing blur is a tuning
+                // problem; an out-of-memory abort on launch is an exhibition that does not
+                // open. Fail soft, loudly, once.
+                if (w <= 0 || h <= 0 || w > 8192 || h > 8192)
+                {
+                    if (!_loggedSize)
+                    {
+                        _loggedSize = true;
+                        Debug.LogError($"[MagnifierBlurFeature] implausible camera target " +
+                                       $"{w}x{h} — skipping the blur rather than allocating from it.");
+                    }
+                    return;
+                }
+
+                desc.sizeMode = TextureSizeMode.Explicit;
+                desc.width = w;
+                desc.height = h;
+
+                if (!_loggedSize)
+                {
+                    _loggedSize = true;
+                    Debug.Log($"[MagnifierBlurFeature] blur target {w}x{h}");
+                }
 
                 TextureHandle destination = renderGraph.CreateTexture(desc);
 
