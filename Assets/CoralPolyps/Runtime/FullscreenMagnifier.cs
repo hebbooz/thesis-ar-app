@@ -85,33 +85,45 @@ namespace CoralPolyps
                  "outruns the screen — around the coral's own radius works.")]
         public float irisWorldRadiusEnd = 0.075f;
 
+        // WHERE THE GROWTH SITS ALONG THE ARC.
+        //
+        // Linear in coverage, the projected iris reaches cornerCap — the point at which it
+        // already covers the screen and is clamped — at roughly coverage 0.7, and then sits
+        // flat for the last third of the approach. So the polyps finish growing well before
+        // the viewer finishes leaning in, and the coral (still scaling toward
+        // maxMagnification) visibly overtakes them.
+        //
+        // The fix is not a bigger final size; screen-filling is exactly the right
+        // destination, and cropping past it costs the surrounding colony. It is to hold the
+        // opening SMALLER for longer, so the same growth is spent later and it is still
+        // accelerating when it arrives. Slower early reads as faster late, which is the
+        // asymmetry a lens actually has.
+        [Tooltip("Shapes coverage (0..1) -> where the iris sits between its start and end " +
+                 "radius. Accelerating by default: held near one corallite through the middle " +
+                 "of the approach, then springing as it fills. Straighten it toward linear if " +
+                 "the opening now feels like it lingers too long.")]
+        public AnimationCurve irisGrowth = new AnimationCurve(
+            new Keyframe(0f, 0f, 0f, 0f), new Keyframe(1f, 1f, 2.2f, 0f));
+
         [Tooltip("Coverage at which the footage starts migrating from crater-fitted to " +
                  "full-screen 100% (finishing at ~0.95). Kept LATE so the content stays " +
                  "locked to crater scale for most of the approach — migrating early is " +
                  "what made the footage read as too large from the very start.")]
         [Range(0f, 0.9f)] public float settleStartCoverage = 0.75f;
 
-        // THE POLYPS MUST NOT STOP BEFORE THE CORAL DOES.
-        //
-        // Screen fit was treated as the destination, and a destination is somewhere growth
-        // stops. At the end of the approach two things pin the footage at once: the iris
-        // radius clamps to cornerCap so it no longer grows on screen, and _Settle reaches 1
-        // so the clip sits cover-fitted at exactly 100%. Meanwhile the coral keeps scaling
-        // toward maxMagnification — so the polyps visibly fall behind the thing they are
-        // emerging from, which is the contradiction the magnification was added to remove,
-        // arriving from the other direction.
-        //
-        // Cropping past 100% keeps them coming, and because it lands entirely in the last
-        // stretch it reads as the spring at the end rather than as a slow creep.
+        // SCREEN-FILLING IS THE RIGHT DESTINATION. Going past it crops into the clip, and
+        // the thing that gets cropped away is the surrounding colony — the context that
+        // makes a single polyp read as one animal among thousands rather than as an
+        // abstract texture. Left at 1; the mechanism stays because a future higher-
+        // resolution master might make a small push past 100% affordable, but it is a
+        // considered trade against losing the colony, not a free knob.
         [Header("End zoom (past 100%)")]
-        [Tooltip("Footage magnification once cover-fitted. 1 = stop at 100% (the old " +
-                 "behaviour). Bounded by the footage, not by taste: the clips are square and " +
-                 "not large, so past roughly 2x the polyps start to soften.")]
-        [Range(1f, 3f)] public float endZoomMax = 2.2f;
+        [Tooltip("Footage magnification once cover-fitted. 1 = fill the screen and stop, " +
+                 "which is what you want. Above 1 crops in and the surrounding colony is the " +
+                 "first thing lost.")]
+        [Range(1f, 3f)] public float endZoomMax = 1f;
 
-        [Tooltip("Coverage at which the zoom past 100% begins. At or near settleStartCoverage " +
-                 "so it takes over exactly as the crater-fit mapping hands off, with no flat " +
-                 "stretch between them where nothing grows.")]
+        [Tooltip("Coverage at which the zoom past 100% begins. Irrelevant while endZoomMax is 1.")]
         [Range(0f, 1f)] public float endZoomStartCoverage = 0.72f;
 
         [Tooltip("How much of the coral's on-screen silhouette the iris may occupy while the " +
@@ -285,7 +297,12 @@ namespace CoralPolyps
                 // The physical size of the magnified spot on the coral. Small at the
                 // start — one corallite, between the walls — opening out as the viewer
                 // commits. Purely a function of distance: phone still => spot still.
-                float worldRadius = Mathf.Lerp(irisWorldRadiusStart, irisWorldRadiusEnd, Coverage);
+                //
+                // Shaped rather than linear, so the growth is spent late and the opening is
+                // still accelerating as it fills the screen instead of having arrived a
+                // third of the way back. See the note on irisGrowth.
+                float g = Mathf.Clamp01(irisGrowth.Evaluate(Coverage));
+                float worldRadius = Mathf.Lerp(irisWorldRadiusStart, irisWorldRadiusEnd, g);
                 radius = ProjectedRadius(worldRadius);
 
                 // Cap where the OPAQUE CORE (radius - feather) reaches the far corner:

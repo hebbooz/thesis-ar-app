@@ -942,8 +942,32 @@ MonoBehaviour:
   irisEdgeSoftness: 0.22
   irisWorldRadiusStart: 0.0018
   irisWorldRadiusEnd: 0.07
+  irisGrowth:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 2.2
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   settleStartCoverage: 0.75
-  endZoomMax: 2.2
+  endZoomMax: 1
   endZoomStartCoverage: 0.72
   coralEdgeMargin: 0.9
   clampReleaseCoverage: 0.8
