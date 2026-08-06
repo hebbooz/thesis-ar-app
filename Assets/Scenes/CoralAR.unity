@@ -943,6 +943,8 @@ MonoBehaviour:
   irisWorldRadiusStart: 0.0018
   irisWorldRadiusEnd: 0.07
   settleStartCoverage: 0.75
+  endZoomMax: 2.2
+  endZoomStartCoverage: 0.72
   coralEdgeMargin: 0.9
   clampReleaseCoverage: 0.8
   sortingOrder: 100

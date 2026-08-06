@@ -32,6 +32,13 @@ Shader "CoralPolyps/MagnifierFullscreen"
         // between the two is the emergence movement itself.
         _Settle ("Crater fit -> screen fit", Range(0, 1)) = 0
 
+        // Magnification of the SCREEN-FIT mapping, 1 = the clip at 100%. Screen fit is a
+        // destination, and a destination is where growth stops — which is the bug this
+        // fixes: the iris clamps at the corner and _Settle reaches 1, so the footage sits
+        // frozen at native scale while the coral keeps swelling past it. Cropping in past
+        // 100% lets the polyps keep coming.
+        _EndZoom ("Screen-fit zoom (1 = 100%)", Float) = 1
+
         _ScreenAspect ("Screen w/h", Float) = 0.462
         _FootageAspect ("Footage w/h", Float) = 0.5625
         _Opacity ("Master opacity", Range(0, 1)) = 1
@@ -67,6 +74,7 @@ Shader "CoralPolyps/MagnifierFullscreen"
                 float  _Radius;
                 float  _Feather;
                 float  _Settle;
+                float  _EndZoom;
                 float  _ScreenAspect;
                 float  _FootageAspect;
                 float  _Opacity;
@@ -129,6 +137,17 @@ Shader "CoralPolyps/MagnifierFullscreen"
                     float s = _FootageAspect / max(_ScreenAspect, 1e-4);
                     uvS.y = (uvS.y - 0.5) * s + 0.5;
                 }
+
+                // PAST 100%. Screen fit is where the old mapping stopped, and stopping is
+                // wrong: at the end of the approach the iris is clamped at the corner and
+                // _Settle has reached 1, so the footage froze at native scale while the
+                // coral kept magnifying past it. The polyps visibly fell behind the thing
+                // they are supposed to be emerging from.
+                //
+                // Cropping in about the centre keeps them coming. It costs resolution —
+                // the clips are square and not large — so this is the one knob here that
+                // is bounded by the footage rather than by taste.
+                uvS = (uvS - 0.5) / max(_EndZoom, 1e-4) + 0.5;
 
                 float2 fuv = lerp(uvI, uvS, saturate(_Settle));
 

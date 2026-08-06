@@ -91,6 +91,29 @@ namespace CoralPolyps
                  "what made the footage read as too large from the very start.")]
         [Range(0f, 0.9f)] public float settleStartCoverage = 0.75f;
 
+        // THE POLYPS MUST NOT STOP BEFORE THE CORAL DOES.
+        //
+        // Screen fit was treated as the destination, and a destination is somewhere growth
+        // stops. At the end of the approach two things pin the footage at once: the iris
+        // radius clamps to cornerCap so it no longer grows on screen, and _Settle reaches 1
+        // so the clip sits cover-fitted at exactly 100%. Meanwhile the coral keeps scaling
+        // toward maxMagnification — so the polyps visibly fall behind the thing they are
+        // emerging from, which is the contradiction the magnification was added to remove,
+        // arriving from the other direction.
+        //
+        // Cropping past 100% keeps them coming, and because it lands entirely in the last
+        // stretch it reads as the spring at the end rather than as a slow creep.
+        [Header("End zoom (past 100%)")]
+        [Tooltip("Footage magnification once cover-fitted. 1 = stop at 100% (the old " +
+                 "behaviour). Bounded by the footage, not by taste: the clips are square and " +
+                 "not large, so past roughly 2x the polyps start to soften.")]
+        [Range(1f, 3f)] public float endZoomMax = 2.2f;
+
+        [Tooltip("Coverage at which the zoom past 100% begins. At or near settleStartCoverage " +
+                 "so it takes over exactly as the crater-fit mapping hands off, with no flat " +
+                 "stretch between them where nothing grows.")]
+        [Range(0f, 1f)] public float endZoomStartCoverage = 0.72f;
+
         [Tooltip("How much of the coral's on-screen silhouette the iris may occupy while the " +
                  "leash is on. Below 1 keeps the rim visibly inside the coral's edge.")]
         [Range(0.5f, 1f)] public float coralEdgeMargin = 0.9f;
@@ -135,6 +158,7 @@ namespace CoralPolyps
         static readonly int RadiusID = Shader.PropertyToID("_Radius");
         static readonly int FeatherID = Shader.PropertyToID("_Feather");
         static readonly int SettleID = Shader.PropertyToID("_Settle");
+        static readonly int EndZoomID = Shader.PropertyToID("_EndZoom");
         static readonly int ScreenAspectID = Shader.PropertyToID("_ScreenAspect");
         static readonly int FootageAspectID = Shader.PropertyToID("_FootageAspect");
         static readonly int OpacityID = Shader.PropertyToID("_Opacity");
@@ -312,6 +336,12 @@ namespace CoralPolyps
             _mat.SetFloat(RadiusID, radius);
             _mat.SetFloat(FeatherID, Mathf.Max(radius * featherFrac, 1e-4f));
             _mat.SetFloat(SettleID, settle);
+
+            // Accelerating rather than linear, so the last centimetres of the approach are
+            // where the polyps genuinely spring rather than merely continue. Squared is the
+            // same shape the takeover curve uses, for the same reason.
+            float ez = Mathf.InverseLerp(endZoomStartCoverage, 1f, Coverage);
+            _mat.SetFloat(EndZoomID, Mathf.Lerp(1f, Mathf.Max(1f, endZoomMax), ez * ez));
             _mat.SetFloat(ScreenAspectID, screenAspect);
             _mat.SetFloat(FootageAspectID, FootageAspect());
             _mat.SetFloat(OpacityID, opacity);
