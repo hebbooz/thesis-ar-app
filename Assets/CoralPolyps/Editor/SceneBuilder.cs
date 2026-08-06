@@ -362,11 +362,14 @@ namespace CoralPolyps
             // corallite it does not move at all, and the divergence from the print is
             // zero exactly where the viewer is looking.
             //
-            // The arc matches the takeover, so the coral and the footage emerge together
-            // rather than the footage swelling over a coral that sits inert — which read
-            // as a video pasted on a skeleton.
+            // The arc FINISHES with the takeover so the two arrive together, but STARTS
+            // inside it. Matching both ends looks right on paper and is wrong in the eye:
+            // the iris begins under 2 mm across and is imperceptible for its first
+            // centimetres, while a scale change on the whole coral is visible immediately —
+            // so started together the coral swells before anything has opened, and the
+            // magnification arrives without its reason.
             proximity.magnifyAnchor = ProximityRevealController.MagnifyAnchor.PinnedCorallite;
-            proximity.magnifyStartDistance = 0.17f;   // == fullscreenStartDistance
+            proximity.magnifyStartDistance = 0.12f;   // INSIDE fullscreenStartDistance (0.17)
             proximity.magnifyFullDistance = 0.05f;    // == fullscreenFullDistance
             proximity.maxMagnification = 2.5f;
             proximity.magnifyCurve = new AnimationCurve(

@@ -1290,7 +1290,7 @@ MonoBehaviour:
   coralRoot: {fileID: 0}
   coralCollider: {fileID: 8596656868548670146}
   fullscreen: {fileID: 0}
-  magnifyStartDistance: 0.17
+  magnifyStartDistance: 0.12
   magnifyFullDistance: 0.05
   maxMagnification: 2.5
   magnifyCurve:

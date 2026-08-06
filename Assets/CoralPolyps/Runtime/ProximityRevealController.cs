@@ -142,16 +142,23 @@ namespace CoralPolyps
         // and the divergence from the print is zero exactly where the viewer is looking.
         //
         // It remains a genuine trade: the rim of the virtual coral does leave the print.
-        // Keep the arc matched to the takeover so the growth is hidden by the same reveal
-        // that motivates it, and keep the curve accelerating so it stays near 1x through the
-        // far half, where a mismatch against the print would be most visible.
+        // The curve is accelerating so it stays near 1x through the far half, where a
+        // mismatch against the print would be most visible.
+        //
+        // START IT INSIDE THE TAKEOVER, NOT WITH IT. Matching the two start distances looks
+        // right on paper and is wrong in the eye: the iris begins life under 2 mm across and
+        // is imperceptible for its first centimetres, while a scale change applied to the
+        // whole coral is visible immediately. Started together, the coral appears to swell
+        // BEFORE anything has opened — the magnification arrives without its reason. They
+        // should still FINISH together, so only the start moves.
         [Header("Magnification arc (metres from coral surface)")]
-        [Tooltip("At or beyond this distance the coral is life-size (1x, registered to the print). " +
-                 "Match this to fullscreenStartDistance so the coral and the footage grow together.")]
-        public float magnifyStartDistance = 0.17f;
+        [Tooltip("At or beyond this distance the coral is life-size (1x, registered to the " +
+                 "print). Keep it INSIDE fullscreenStartDistance so the opening is visible " +
+                 "before the coral starts moving — see the note above.")]
+        public float magnifyStartDistance = 0.12f;
 
         [Tooltip("At or within this distance the coral reaches maxMagnification. Must be < start. " +
-                 "Match this to fullscreenFullDistance.")]
+                 "Match this to fullscreenFullDistance so the two arrive together.")]
         public float magnifyFullDistance = 0.05f;
 
         [Tooltip("Scale multiplier at closest range. 1 = OFF (registration stays exact). " +
