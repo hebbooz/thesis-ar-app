@@ -128,30 +128,53 @@ namespace CoralPolyps
                  "coverage whenever the coral does not fill the frame.")]
         public FullscreenMagnifier fullscreen;
 
-        // WARNING: magnification INHERENTLY breaks registration. Scaling the coral moves its
-        // surface off the print, and the anchor is camera-relative, so the coral shifts as the
-        // viewer moves. Keep maxMagnification at 1 unless you deliberately want that trade, and
-        // keep the range very close so 1:1 registration holds at normal viewing distances.
+        // THE CORAL GROWS WITH THE POLYPS.
+        //
+        // Without this the footage swells while the coral it is emerging from sits inert,
+        // which reads as a video pasted over a skeleton rather than as magnification — the
+        // two things that should move together are the two things that do not.
+        //
+        // This arc was disabled for a long time, with the note that magnification inherently
+        // breaks registration because "the anchor is camera-relative, so the coral shifts as
+        // the viewer moves". True of both anchors that existed then: each was re-derived from
+        // the camera every frame, so the scale's fixed point slid around. MagnifyAnchor
+        // .PinnedCorallite removes that — a fixed point on the tracked coral does not slide,
+        // and the divergence from the print is zero exactly where the viewer is looking.
+        //
+        // It remains a genuine trade: the rim of the virtual coral does leave the print.
+        // Keep the arc matched to the takeover so the growth is hidden by the same reveal
+        // that motivates it, and keep the curve accelerating so it stays near 1x through the
+        // far half, where a mismatch against the print would be most visible.
         [Header("Magnification arc (metres from coral surface)")]
-        [Tooltip("At or beyond this distance the coral is life-size (1x, registered to the print).")]
-        public float magnifyStartDistance = 0.06f;
+        [Tooltip("At or beyond this distance the coral is life-size (1x, registered to the print). " +
+                 "Match this to fullscreenStartDistance so the coral and the footage grow together.")]
+        public float magnifyStartDistance = 0.17f;
 
-        [Tooltip("At or within this distance the coral reaches maxMagnification. Must be < start.")]
-        public float magnifyFullDistance = 0.02f;
+        [Tooltip("At or within this distance the coral reaches maxMagnification. Must be < start. " +
+                 "Match this to fullscreenFullDistance.")]
+        public float magnifyFullDistance = 0.05f;
 
-        [Tooltip("Scale multiplier at closest range. 1 = OFF (keeps registration exact). " +
-                 "Anything above 1 deliberately slides the coral off the print as you move.")]
-        public float maxMagnification = 1.0f;
+        [Tooltip("Scale multiplier at closest range. 1 = OFF (registration stays exact). " +
+                 "This cannot MATCH the footage — the iris spans 1.8 mm of coral at the start " +
+                 "and 70 mm at the end, so matching would mean a four-metre coral. The point is " +
+                 "that the coral participates rather than sitting still, so a modest 2-3x does " +
+                 "the work.")]
+        public float maxMagnification = 2.5f;
 
-        [Tooltip("Shapes proximity (0 at start, 1 at full) -> magnification.")]
-        public AnimationCurve magnifyCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        [Tooltip("Shapes proximity (0 at start, 1 at full) -> magnification. Accelerating, like " +
+                 "the takeover: negligible growth through the far half where the coral is still " +
+                 "being judged against the print it sits on.")]
+        public AnimationCurve magnifyCurve = new AnimationCurve(
+            new Keyframe(0f, 0f, 0f, 0f), new Keyframe(1f, 1f, 2.5f, 0f));
 
-        public enum MagnifyAnchor { CoralCenter, FrontSurface }
+        public enum MagnifyAnchor { CoralCenter, FrontSurface, PinnedCorallite }
 
-        [Tooltip("Where the zoom scales FROM. FrontSurface keeps the cups you're inspecting " +
-                 "as the stable focal point (less 'cups racing ahead of the edges'); CoralCenter " +
-                 "grows evenly about the middle but the near face bulges toward the camera.")]
-        public MagnifyAnchor magnifyAnchor = MagnifyAnchor.FrontSurface;
+        [Tooltip("Where the zoom scales FROM. PinnedCorallite anchors on the cup the polyps " +
+                 "are emerging from — the only option that is not re-derived from the camera " +
+                 "each frame, so it is the only one that does not slide. FrontSurface keeps " +
+                 "the near face as the focal point; CoralCenter grows about the middle but the " +
+                 "near face bulges toward the camera.")]
+        public MagnifyAnchor magnifyAnchor = MagnifyAnchor.PinnedCorallite;
 
         [Header("Loupe reveal arc (metres from coral surface)")]
         [Tooltip("Renderers whose material carries the loupe properties — the magnifier layer. " +
@@ -607,7 +630,14 @@ namespace CoralPolyps
             // was — whereas a wrong pose that MOVES reads instantly as a fault. Confidence
             // returning resumes live tracking with no snap, because the frozen pose is by
             // definition the last good one.
-            if (!magnifyEnabled && _haveBase && targetVisible)
+            //
+            // THIS RUNS WHETHER OR NOT WE MAGNIFY. It used to be gated on !magnifyEnabled,
+            // which meant switching magnification on silently switched the anti-flicker guard
+            // OFF — the exact failure the whole reveal rework was about, waiting behind a
+            // config change. The two compose cleanly as long as the order is right: this
+            // captures (or restores) the BASE pose, because ResetToBase has already undone
+            // last frame's scaling, and the magnification below then scales out from there.
+            if (_haveBase && targetVisible)
             {
                 if (VuforiaTracked && believable)
                 {
@@ -640,18 +670,63 @@ namespace CoralPolyps
                 return;
             }
 
-            // --- Magnification: scale up as the camera nears ---
+            // --- Loupe: the window onto the micro-scale opens as the viewer leans in ---
+            //
+            // RESOLVED BEFORE MAGNIFICATION, deliberately. The pinned cup is now the point
+            // the coral scales about, so it is an INPUT to magnification rather than a
+            // consequence of it. Doing it here also means the raycast and the map lookup run
+            // against the coral at 1:1 (ResetToBase has already undone last frame's scale),
+            // which is the geometry the baked map actually describes.
+            //
+            // It stays correct after scaling for free: the anchor of a scale is its fixed
+            // point, so the pinned cup does not move, and LoupeCenter needs no recomputation.
+            float lt = InvLerpClamped(loupeStartDistance, loupeFullDistance, d);
+            LoupeRadius = maxLoupeRadius * Mathf.Clamp01(loupeCurve.Evaluate(lt));
+            // While held, keep the last centre: the raycast would be against a stale or
+            // disabled collider and would wander. A PINNED centre is safe to keep
+            // recomputing — it comes off the coral's own transform, which is frozen too, so
+            // it stays exactly where it was rather than being re-solved from a bad pose.
+            if (!TakeoverHeld) LoupeCenter = UpdatePin(FindLoupeCenter(center), d);
+            else if (PinnedIndex >= 0) LoupeCenter = PinWorld();
+            PushLoupe();
+
+            // --- Magnification: the coral swells as the camera nears ---
+            //
+            // WHY THIS IS ON AGAIN. It was disabled with the note that "magnification
+            // INHERENTLY breaks registration ... the anchor is camera-relative, so the coral
+            // shifts as the viewer moves". That was true of both anchors on offer — both were
+            // re-derived from the camera every frame, so the scale's fixed point slid around,
+            // which is the same disease the loupe had.
+            //
+            // PinnedCorallite removes the objection rather than accepting it. Scaling about a
+            // fixed point on the tracked coral means that point does not move at all, and the
+            // divergence from the print grows with distance FROM it — so it is exactly zero
+            // where the viewer is looking, and largest at the rim, which is where the reveal
+            // is heading off-screen anyway.
+            //
+            // It is still a real trade: the virtual coral does leave the print at the edges.
+            // What buys it is the contradiction it removes — polyps growing while the coral
+            // they emerge from sits inert reads as footage pasted on top, not as magnification.
             float mt = InvLerpClamped(magnifyStartDistance, magnifyFullDistance, d);
             float k = Mathf.Lerp(1f, Mathf.Max(1f, maxMagnification), Mathf.Clamp01(magnifyCurve.Evaluate(mt)));
             Magnification = k;
             if (k > 1.0001f)
             {
-                // Choose the point the scale radiates FROM. FrontSurface anchors on the near
-                // face (the inspected cups) so they hold their focal position; CoralCenter
-                // grows about the middle (near face bulges toward the camera in perspective).
+                // Where the scale radiates FROM.
+                //   PinnedCorallite — the cup the polyps are emerging from. Zero divergence
+                //     at the point of attention; the only anchor that is not camera-relative.
+                //   FrontSurface    — the near face, so inspected cups hold their focal spot.
+                //   CoralCenter     — grows about the middle; the near face bulges forward.
                 Vector3 anchor = center;
-                if (magnifyAnchor == MagnifyAnchor.FrontSurface)
+                if (magnifyAnchor == MagnifyAnchor.PinnedCorallite && PinnedIndex >= 0)
                 {
+                    anchor = LoupeCenter;                          // resolved just above
+                }
+                else if (magnifyAnchor == MagnifyAnchor.FrontSurface ||
+                         magnifyAnchor == MagnifyAnchor.PinnedCorallite)
+                {
+                    // PinnedCorallite falls back here until a cup is latched, so the far half
+                    // of the approach still behaves rather than snapping about the centre.
                     Vector3 toCam = cam.transform.position - center;
                     if (toCam.sqrMagnitude > 1e-8f)
                     {
@@ -666,17 +741,6 @@ namespace CoralPolyps
                 _root.localScale = _baseLocalScale * k;            // uniform scale about the pivot...
                 _root.position = P + (anchor - P) * (1f - k);      // ...shift so the anchor stays put
             }
-
-            // --- Loupe: the window onto the micro-scale opens as the viewer leans in ---
-            float lt = InvLerpClamped(loupeStartDistance, loupeFullDistance, d);
-            LoupeRadius = maxLoupeRadius * Mathf.Clamp01(loupeCurve.Evaluate(lt));
-            // While held, keep the last centre: the raycast would be against a stale or
-            // disabled collider and would wander. A PINNED centre is safe to keep
-            // recomputing — it comes off the coral's own transform, which is frozen too, so
-            // it stays exactly where it was rather than being re-solved from a bad pose.
-            if (!TakeoverHeld) LoupeCenter = UpdatePin(FindLoupeCenter(center), d);
-            else if (PinnedIndex >= 0) LoupeCenter = PinWorld();
-            PushLoupe();
 
             // --- Takeover: past the loupe, the footage leaves the coral entirely ---
             float ft = InvLerpClamped(fullscreenStartDistance, fullscreenFullDistance, d);

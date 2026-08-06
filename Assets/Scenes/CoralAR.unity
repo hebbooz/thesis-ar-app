@@ -1264,9 +1264,9 @@ MonoBehaviour:
   coralRoot: {fileID: 0}
   coralCollider: {fileID: 8596656868548670146}
   fullscreen: {fileID: 0}
-  magnifyStartDistance: 0.06
-  magnifyFullDistance: 0.02
-  maxMagnification: 1
+  magnifyStartDistance: 0.17
+  magnifyFullDistance: 0.05
+  maxMagnification: 2.5
   magnifyCurve:
     serializedVersion: 2
     m_Curve:
@@ -1282,7 +1282,7 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 1
       value: 1
-      inSlope: 0
+      inSlope: 2.5
       outSlope: 0
       tangentMode: 0
       weightedMode: 0
@@ -1291,7 +1291,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  magnifyAnchor: 1
+  magnifyAnchor: 2
   loupeTargets:
   - {fileID: 1274010843}
   loupeStartDistance: 0.3

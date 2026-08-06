@@ -355,9 +355,23 @@ namespace CoralPolyps
                 ? new[] { magnifierRenderer }
                 : new Renderer[0];
 
-            // Registration beats zoom: scaling the tracked coral slides it off the
-            // print. Left at 1 deliberately — raise it only as a considered trade.
-            proximity.maxMagnification = 1f;
+            // THE CORAL GROWS WITH THE POLYPS. Off for a long time because scaling the
+            // tracked coral slides it off the print — but that was a property of the
+            // ANCHOR, not of scaling: both old anchors were re-derived from the camera
+            // each frame, so the scale's fixed point wandered. Anchored on the pinned
+            // corallite it does not move at all, and the divergence from the print is
+            // zero exactly where the viewer is looking.
+            //
+            // The arc matches the takeover, so the coral and the footage emerge together
+            // rather than the footage swelling over a coral that sits inert — which read
+            // as a video pasted on a skeleton.
+            proximity.magnifyAnchor = ProximityRevealController.MagnifyAnchor.PinnedCorallite;
+            proximity.magnifyStartDistance = 0.17f;   // == fullscreenStartDistance
+            proximity.magnifyFullDistance = 0.05f;    // == fullscreenFullDistance
+            proximity.maxMagnification = 2.5f;
+            proximity.magnifyCurve = new AnimationCurve(
+                new Keyframe(0f, 0f, 0f, 0f),
+                new Keyframe(1f, 1f, 2.5f, 0f));
 
             // THE ARC. Set here rather than left to the scene, because the numbers are
             // not free parameters — two hard constraints pin them:
