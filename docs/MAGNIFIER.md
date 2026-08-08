@@ -1,6 +1,7 @@
 # MAGNIFIER.md — the reveal, the arc, and the blur
 
-_Written 2026-08-04, extended 2026-08-05 with §3b (corallite pinning)._
+_Written 2026-08-04, extended 2026-08-05 with §3b (corallite pinning) and 2026-08-08 with
+§3c (rotational registration)._
 _Covers the magnifier rework from commit `c32038c` onward._
 
 The decisions behind how the polyps emerge, why each one was made, and which are
@@ -248,6 +249,91 @@ worst failure at loupe range.
 
 ---
 
+## 3c. Registration — the half of the pose the guards could not see
+
+**The symptom.** The coral sits in the right *place* on the print and is visibly twisted off
+it — sometimes by tens of degrees, intermittently, from ordinary viewing angles.
+
+**Why it is a rotation and not a position.** A Model Target solves pose from silhouette and
+edge geometry, and those constrain the two halves of the pose very unequally. The silhouette
+centroid and apparent size pin translation hard. Yaw about the dome axis they barely pin at
+all: this target is 133 × 139 × 110 mm with a near-square footprint and 457 corallites at
+4.2 mm pitch that all look like each other, so rotating the model about its vertical axis
+changes the silhouette almost not at all. Many yaw hypotheses score within noise of one
+another and the winner changes frame to frame.
+
+**Why nothing caught it.** Every guard in `ProximityRevealController` measured a scalar
+distance — `implausibleFarM`, `implausibleJumpM`, the One Euro filter, the hold, the
+reconcile. A yaw flip changes camera-to-coral distance by *essentially zero*. So it passed
+`IsPlausiblePose`, was marked `believable`, and was then captured into `_confidentRot` as a
+pose worth defending. §1's guard — the one that exists to stop the mesh chasing bad solves —
+was memorising the error and holding it steady.
+
+The invariant in §1 is still right. It was just enforced on one of the two quantities.
+
+### ⚠️ The gate shipped enabled at 60 deg/s and made registration WORSE. It is now off by default.
+
+Symptoms on device: the coral snapped to positions further wrong than before, and was
+sometimes *much smaller* than the print.
+
+**The error.** The reasoning was "the coral is bolted down, so its world rotation is constant,
+so 60 deg/s is loose by an order of magnitude." The **object** is steady; the **solve** is not.
+Ordinary Vuforia jitter on a low-feature target runs a degree or three frame to frame, and at
+60 fps one degree per frame *is* 60 deg/s. The gate was set at the level of honest tracking and
+refused most of it.
+
+**Why that is so much worse than merely useless — two compounding failures:**
+
+1. Rejecting continuously latches the mesh near its **first** solve and it never updates again.
+   That is not "a stale pose is invisible"; it is a coral pinned to a world pose from thirty
+   seconds ago while the visitor walks around it.
+2. A frozen mesh **does not stop the magnification block**. It still runs, scaling by `k` and
+   displacing the pivot by `(anchor - P) * (1 - k)`. At `maxMagnification` 2.5 that is a 1.5×
+   shove along a vector derived from a **live raycast against stale geometry**, so the scale-up
+   and the displacement stop cancelling. The coral lands anywhere — including far behind the
+   print, where a 2.5× mesh still reads as far too small. *This one is a pre-existing bug that
+   the gate merely exposed:* it fires on any frozen pose, including every `EXTENDED_TRACKED`
+   dropout today, and is a live suspect for part of the original complaint. Not yet fixed.
+
+**The order was wrong.** The gate is a fix whose target was never measured. `enableSpinGate` is
+now `false`; the `rot:` readout runs regardless and costs nothing. Watch `spin` on device, see
+what honest tracking actually does, set `implausibleSpinDegPerS` comfortably above it — expect
+several hundred, not 60 — and only then turn the gate on.
+
+**The gate's design, for when it is switched on.** The coral is bolted into the bath and
+Vuforia's world centre mode is `DEVICE`, so a correct solve should report a world rotation that
+is nearly *constant* at the scale of seconds, whatever it does frame to frame.
+
+Two details carry the design:
+
+- **It measures against the last ACCEPTED solve, divided by the time since.** The tolerance is
+  a budget that *grows* while a solve is being refused, so a transient flip is rejected and a
+  solve that genuinely stays put is adopted about half a second later. Distrust can never
+  become permanent. That ceiling is the entire lesson of §1 — the re-lock gate died because it
+  could refuse the tracker indefinitely, and a rotational version of that mistake was available
+  here for free.
+- **The reference is the OBSERVER's rotation, not the coral's.** §3's freeze writes the
+  coral's transform, so reading rotation back from it would compare a solve against this
+  file's own output and the test would silently measure nothing.
+
+**A bad rotation holds the MESH; it does not hold `d`.** `spinPlausible` is deliberately not
+folded into `believable`. `believable` governs `d`, and `d` is what the reveal tracks — so
+folding a yaw fault in would freeze the emergence on every tracker twitch and charge a 0.25 s
+reconcile for each recovery. A yaw flip tells us nothing about how far away the hand is; that
+measurement is still good. Two independent faults, two independent gates: **a bad distance
+holds the reveal, a bad rotation holds the mesh.** The hand keeps driving the picture either way.
+
+**This matters most at loupe range,** because §3b pins the emergence to a baked corallite
+index. Yaw off ⇒ the polyps emerge from a cup that is not physically there, which `CLAUDE.md`
+§3 calls the single worst failure the piece can make.
+
+**What the gate cannot do.** It selects among the poses Vuforia offers. It cannot manufacture
+yaw information the geometry does not contain. If from some viewpoint the wrong yaw
+*consistently* wins the solve, this buys a stable wrong answer instead of an unstable one —
+see §8 for how to tell, and what to do about it.
+
+---
+
 ## 4. The video
 
 **A filesystem path is not a URL, and `VideoPlayer.url` parses it as one.** This
@@ -304,7 +390,8 @@ The HUD is the acceptance test. Three-finger tap toggles it; `H` in the editor.
 ```
 magnifier=alive 1.00 / fluoro 0.00 / dead 0.00   src=video [3/3 moving]
 magnify: Blending 2.3s   m=0.47   d=0.062 (raw 0.061)   pose ok
-cover 0.42 partial   loupe 30mm   x1.0   blur 0.61   vuforia trk
+cover 0.42 partial   loupe 30mm   x1.0   blur 0.61   pin #212   vuforia trk
+rot: drift 1.4deg   spin 3deg/s   ok   rej 6
 ```
 
 - **`m` and `d` must move together or not at all.** If `m` changes while `d` sits
@@ -315,6 +402,18 @@ cover 0.42 partial   loupe 30mm   x1.0   blur 0.61   vuforia trk
 - **`vuforia trk/EXT` beside `cover`** is how the tracking limit in §2 gets measured.
 - **`HELD n.ns`** means the pose is not believable and `d` is frozen — which is why
   the picture is frozen too, correctly.
+- **`rot:` is the registration line** (§3c) and it is the only place a yaw error is
+  measurable — the two lines above it describe the pose as a single distance, which is the
+  half of it that was never the problem. `drift` is how far the live solve has twisted from
+  the orientation actually being drawn, in the unit you can judge against the print.
+
+  Walk a slow circuit of the coral and read which regime you are in:
+
+  | Reading | Meaning |
+  |---|---|
+  | `drift` near 0, `rej` climbing slowly | Flips are transient and being caught. Working state — the mesh does not visibly twist. |
+  | `drift` parked at 20-40deg and not falling | The tracker has settled on a wrong yaw and the gate has correctly stopped refusing it. **No filter recovers this** — the symmetry has to be broken on the model target or the print. |
+  | `rej` climbing continuously from every angle | `implausibleSpinDegPerS` is too tight and is refusing honest tracking. Raise it. |
 
 ---
 
@@ -360,6 +459,38 @@ the field is still empty.
   *changes* while leaning in is the pin thrashing, which would look exactly like the
   sliding it exists to stop.
 
+- **`implausibleSpinDegPerS` (60) is a first guess and the spin gate has not run on device.**
+  It was reasoned from "the coral does not move, so its world rotation should be constant",
+  not measured. Read the `rot:` line (§6) on a slow circuit and set it from what honest
+  tracking actually does.
+
+**Registration — the model target itself (§3c)**
+
+None of these are code, and all of them are upstream of the gate, which only ever chooses
+among the poses Vuforia hands it. Worth doing in this order once §3c has been judged:
+
+- **`motionHint` is `adaptive` and should almost certainly be `static`.** `coral-rendering.xml`
+  says `motionHint="adaptive"`, i.e. "expect this object to be picked up and moved" — so
+  Vuforia re-solves pose every frame, which is the door the yaw flips walk through. The coral
+  is fixed in a water bath. Vuforia's guidance is that STATIC suits immobile objects and lets
+  the tracker lean on the device pose instead of re-solving; the cost, that moving the object
+  breaks tracking until re-detection, does not apply here. One field in the Model Target
+  Generator, and the highest-leverage non-code change available.
+- **`trackingMode="car"`** on a 13 cm coral. Unverified — a vehicle tracking mode on this
+  object deserves one look in the MTG before anything else is tuned.
+- **The database is untrained.** All 7 entry points in the XML say `trained="no"`, so this is
+  a standard Model Target leaning on guide-view alignment for recognition. A persistent yaw
+  error usually descends from a bad *initial* solve; an Advanced (trained) database gives
+  view-independent recognition.
+- **`mTrackingOptimization` is DEFAULT and `mHasRealisticTextures` is 0** — a white untextured
+  print is a low-feature object by definition, so `LOW_FEATURE_OBJECTS` is worth a test.
+  Likewise `mEnhanceRuntimeDetection` (currently 0). Both reversible one-field changes.
+- **Break the symmetry physically.** The only fix that addresses the cause rather than the
+  symptom: one rigid asymmetric landmark in the Model Target CAD — an asymmetric base collar
+  under the print, a notch, one distinctly-shaped lobe. A dome with a single yaw landmark
+  collapses the ambiguity outright. Reach for this only if the `rot:` line says the wrong yaw
+  is winning *consistently* rather than intermittently.
+
 **Known-incomplete**
 
 - **`confidence` in the scatter map is unusable as a quality gate.** All 457 entries
@@ -401,6 +532,7 @@ the field is still empty.
 | `0e9d0e8` | Radial blur: keep the loupe sharp, soften outward from its rim |
 | `2604bc9` | Fix build: bokehApertureStart referenced after being removed |
 | `0423945` | Document the magnifier rework: decisions, constraints, and what is left |
-| _(this)_  | Pin the emergence to a corallite instead of the crosshair |
+| | Pin the emergence to a corallite instead of the crosshair |
+| _(this)_  | Measure the solve's rotation; the gate that acts on it stays off until it is |
 
 Each message carries the reasoning for its own change; this document is the synthesis.

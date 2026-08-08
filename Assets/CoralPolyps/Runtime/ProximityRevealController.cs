@@ -241,6 +241,58 @@ namespace CoralPolyps
                  "passes, or it becomes the re-lock gate all over again.")]
         public float implausibleJumpM = 0.15f;
 
+        // THE FAULT THE DISTANCE TESTS CANNOT SEE.
+        //
+        // Every guard above this line measures a scalar distance. A Model Target on a
+        // near-symmetric object does not usually fail by getting the distance wrong — it
+        // fails by getting the YAW wrong. This coral is a 133 x 139 x 110 mm dome with a
+        // near-square footprint and 457 corallites at 4.2 mm pitch that all look alike, so
+        // rotating the model about its vertical axis barely changes the silhouette: many
+        // yaw hypotheses score within noise of one another and the winner can change frame
+        // to frame. The result is a coral sitting exactly on the print but twisted off it.
+        //
+        // That failure is INVISIBLE to everything above: a yaw flip changes the camera-to-
+        // coral distance by essentially zero, so it passes IsPlausiblePose, is marked
+        // believable, and is then captured into _confidentRot as a pose worth defending.
+        // The anti-flicker guard memorises the error and holds it.
+        //
+        // The coral is bolted into the bath and Vuforia's world centre mode is DEVICE, so
+        // a correct solve reports a world rotation that is very nearly CONSTANT. Anything
+        // else is error, and the only question is how fast it arrives.
+        // OFF BY DEFAULT, AND THE READOUT COMES FIRST.
+        //
+        // Shipped enabled at 60 deg/s and it made registration WORSE, in the two ways below.
+        // Both come from the same error: reasoning that "the coral is bolted down, so its world
+        // rotation is constant, so 60 deg/s is loose by an order of magnitude". The object is
+        // steady. The SOLVE is not. Ordinary Vuforia jitter on a low-feature target runs a
+        // degree or three frame to frame, and at 60 fps one degree per frame IS 60 deg/s — so
+        // the gate sat on top of honest tracking and refused most of it.
+        //
+        //   1. Rejecting continuously latches the mesh near its FIRST solve and it never
+        //      updates again. That is not "a stale pose is invisible" — it is a coral pinned
+        //      to a world pose from thirty seconds ago while the visitor walks around it.
+        //   2. Worse, a frozen mesh does not stop the magnification block below, which still
+        //      scales by k and displaces the pivot by (anchor - P) * (1 - k). At k = 2.5 that
+        //      is a 1.5x shove along a vector derived from a LIVE raycast against STALE
+        //      geometry. The two no longer cancel, so the coral lands anywhere — including far
+        //      behind the print, which reads as it being much too small.
+        //
+        // So the order was wrong: the gate is a fix for a fault whose size was never measured.
+        // The readout (HUD `rot:`) costs nothing and runs regardless; turn this on only once
+        // `spin` has been watched on device and the threshold set from what honest tracking
+        // actually does. See MAGNIFIER.md §3c.
+        [Tooltip("Enable the rotational plausibility gate. OFF by default — it must be tuned " +
+                 "against measured jitter before it helps, and a threshold below what honest " +
+                 "tracking does makes registration dramatically worse rather than slightly. " +
+                 "The HUD `rot:` readout works with this off; use it to pick the value first.")]
+        public bool enableSpinGate = false;
+
+        [Tooltip("With the gate enabled: largest believable rate of change of the coral's WORLD " +
+                 "rotation, deg/s. Set it ABOVE the `spin` figure honest tracking shows on the " +
+                 "HUD — comfortably above, because this is a TELEPORT test. 60 was a guess and " +
+                 "was far too tight; expect the real value to be several hundred.")]
+        public float implausibleSpinDegPerS = 60f;
+
         [Header("Holding the input (never the output)")]
         [Tooltip("How long to hold `d` at its last measured value once the target is lost, " +
                  "before releasing. Vuforia drops a ~10 cm Model Target around 5 cm, which is " +
@@ -359,6 +411,23 @@ namespace CoralPolyps
         /// <summary>Did this frame's measurement survive the sanity check?</summary>
         public bool LastPosePlausible { get; private set; }
 
+        /// <summary>Did this frame's ROTATION survive its sanity check? False means the solve
+        /// twisted faster than a bolted-down coral can and the mesh is holding its last good
+        /// orientation. Independent of <see cref="LastPosePlausible"/> — see LateUpdate §3.</summary>
+        public bool LastSpinPlausible { get; private set; } = true;
+
+        /// <summary>Degrees between the live solve and the orientation actually being drawn.
+        /// Near zero when tracking is honest; it is the size of a yaw error, in the only unit
+        /// that can be judged against the print.</summary>
+        public float SolveDriftDeg { get; private set; }
+
+        /// <summary>Rate of <see cref="SolveDriftDeg"/>, deg/s — the quantity the gate tests.</summary>
+        public float SolveSpinDegPerS { get; private set; }
+
+        /// <summary>How many solves have been rejected for spinning. The acceptance test: walk a
+        /// circuit of the coral and watch this against whether the mesh visibly twists.</summary>
+        public int SpinRejections { get; private set; }
+
         /// <summary>True when Vuforia reports genuinely TRACKED (not EXTENDED_TRACKED, which is
         /// dead reckoning — the mesh can sit centimetres off the print under it). Defaults true
         /// when no observer is found, so editor Play mode and manual rigs behave.</summary>
@@ -396,6 +465,19 @@ namespace CoralPolyps
         private Vector3 _confidentPos;
         private Quaternion _confidentRot;
         private bool _haveConfidentPose;
+
+        // The last ACCEPTED solve rotation, read off the observer rather than the coral. The
+        // coral's own transform is written by the freeze below, so reading rotation back from
+        // it would compare a solve against a value this file wrote — the reference has to be
+        // the one transform Vuforia owns outright and we never touch.
+        //
+        // The age is what keeps this a teleport test rather than a lock-out: the tolerance is
+        // a BUDGET that grows with time, so a transient flip is rejected while a solve that
+        // genuinely stays put is adopted a fraction of a second later. Distrust here can never
+        // become permanent, which is the whole failure mode of the gate this replaces.
+        private Quaternion _lastGoodRot = Quaternion.identity;
+        private float _lastGoodRotAgeS;
+        private bool _haveLastGoodRot;
 
         // The transform the scatter map's local space belongs to — the mesh's own, which is
         // not necessarily coralRoot (SceneBuilder puts the renderer on a child). Resolved
@@ -644,18 +726,49 @@ namespace CoralPolyps
             // config change. The two compose cleanly as long as the order is right: this
             // captures (or restores) the BASE pose, because ResetToBase has already undone
             // last frame's scaling, and the magnification below then scales out from there.
+            //
+            // The rotational half of that guard is deliberately NOT wired into `believable`
+            // above, and the distinction is the point rather than an oversight. `believable`
+            // governs `d`, and `d` is what the reveal tracks — so folding a yaw fault into it
+            // would freeze the emergence every time the tracker twitched, and each recovery
+            // would cost a 0.25 s reconcile. But a yaw flip tells us nothing about how far away
+            // the hand is; that measurement is still perfectly good. The two faults are
+            // independent and get independent gates: a bad DISTANCE holds the reveal, a bad
+            // ROTATION holds the mesh. The visitor's hand keeps driving the picture either way.
+            bool spinPlausible = IsPlausibleSpin(targetVisible, dt);
+
             if (_haveBase && targetVisible)
             {
-                if (VuforiaTracked && believable)
+                if (VuforiaTracked && believable && spinPlausible)
                 {
                     _confidentPos = _root.position;
                     _confidentRot = _root.rotation;
                     _haveConfidentPose = true;
+
+                    // Accepted: this solve becomes the reference the next one is judged against,
+                    // and the budget resets.
+                    if (_observer != null)
+                    {
+                        _lastGoodRot = _observer.transform.rotation;
+                        _lastGoodRotAgeS = 0f;
+                        _haveLastGoodRot = true;
+                    }
                 }
                 else if (_haveConfidentPose)
                 {
                     _root.SetPositionAndRotation(_confidentPos, _confidentRot);
                 }
+            }
+            else
+            {
+                // Target gone. Forget the reference, exactly as the teleport test forgets
+                // _lastGoodRaw: re-acquiring at a legitimately different orientation is normal
+                // after a gap, and judging it against a pre-dropout reading would reject every
+                // returning frame.
+                _haveLastGoodRot = false;
+                SolveDriftDeg = 0f;
+                SolveSpinDegPerS = 0f;
+                LastSpinPlausible = true;
             }
 
             // ------------------------------------------------------------- 4. THE ARCS
@@ -847,6 +960,84 @@ namespace CoralPolyps
 
             if (_lastGoodRaw > 0f && Mathf.Abs(rawDist - _lastGoodRaw) > implausibleJumpM) return false;
             return true;
+        }
+
+        /// <summary>
+        /// Reject a solve that has twisted faster than a bolted-down coral possibly could.
+        ///
+        /// Measured against the last ACCEPTED solve rather than frame to frame, and divided by
+        /// the time since — so the tolerance is a budget that grows while a solve is being
+        /// refused. A 30 deg flip at the default 60 deg/s is rejected for half a second and
+        /// then, if the tracker is still insisting on it, accepted. That ceiling is deliberate:
+        /// this file has been broken once already by a gate that could distrust the tracker
+        /// indefinitely, and "mostly right with occasional flips" only needs the transients gone.
+        ///
+        /// The reference is the OBSERVER's rotation, not the coral's, because the freeze in
+        /// LateUpdate §3 writes the coral's — reading it back would compare a solve against
+        /// this file's own output and the test would quietly measure nothing.
+        /// </summary>
+        private bool IsPlausibleSpin(bool targetVisible, float dt)
+        {
+            // No observer means no Vuforia (editor play mode, ProximityTestRig): there is no
+            // solve to distrust, and gating on one would freeze the rig.
+            if (_observer == null || useManualDistance || !targetVisible)
+            {
+                LastSpinPlausible = true;
+                return true;
+            }
+
+            _lastGoodRotAgeS += dt;
+
+            // Only a TRACKED frame offers a real solve. Through EXTENDED_TRACKED the pose is
+            // dead reckoned and §3 already refuses to capture it, so judging it here would
+            // inflate the rejection count with frames that change nothing on screen. The age
+            // keeps accumulating across the gap on purpose: by the time a real solve returns
+            // the budget is large, which is what lets a re-acquisition at a legitimately
+            // different orientation land without a fight.
+            if (!VuforiaTracked)
+            {
+                LastSpinPlausible = true;
+                return true;
+            }
+
+            if (!_haveLastGoodRot || _lastGoodRotAgeS <= 1e-4f)
+            {
+                // Nothing to judge against yet, or no time has passed for a rate to mean
+                // anything. Accept, so the first solve after a dropout always establishes.
+                SolveDriftDeg = 0f;
+                SolveSpinDegPerS = 0f;
+                LastSpinPlausible = true;
+                return true;
+            }
+
+            SolveDriftDeg = Quaternion.Angle(_lastGoodRot, _observer.transform.rotation);
+            SolveSpinDegPerS = SolveDriftDeg / _lastGoodRotAgeS;
+
+            // MEASURE ALWAYS, REJECT ONLY WHEN ASKED. With the gate off this still populates
+            // the HUD and still advances the reference, so `spin` reads the same numbers it
+            // would if the gate were live — which is what makes it usable for choosing the
+            // threshold. Nothing is refused, so behaviour is identical to before the gate
+            // existed.
+            if (!enableSpinGate)
+            {
+                LastSpinPlausible = true;
+                return true;
+            }
+
+            bool ok = SolveSpinDegPerS <= implausibleSpinDegPerS;
+            if (!ok)
+            {
+                SpinRejections++;
+                // Log the ONSET only. A flip lasting several frames is one event, and a per-frame
+                // log would bury the thing it is evidence for.
+                if (logStateChanges && LastSpinPlausible)
+                    Debug.Log($"[magnify] solve spun {SolveDriftDeg:F1}deg in {_lastGoodRotAgeS * 1000f:F0}ms " +
+                              $"({SolveSpinDegPerS:F0}deg/s) — holding the mesh's rotation. " +
+                              $"rejection #{SpinRejections}");
+            }
+
+            LastSpinPlausible = ok;
+            return ok;
         }
 
         private void SetCoralHidden(bool hidden)

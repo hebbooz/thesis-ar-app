@@ -105,14 +105,19 @@ namespace CoralPolyps
                 if (applied != null) GUILayout.Label(applied, _label);
 
                 // --- Magnification diagnostics (Phase 1 of the black-box fix) ---
-                // The acceptance criteria are read straight off these two lines during a
-                // screen recording: a 60 s close hold must show zero state changes here.
+                // The acceptance criteria are read straight off these lines during a screen
+                // recording: a 60 s close hold must show zero state changes here.
+                //
+                // The third line is registration. The first two describe the pose as a single
+                // distance, which is the half of it that was never the problem — a yaw error
+                // moves the coral not at all in `d` and quite visibly on the print.
                 if (proximity != null)
                 {
                     var prevMag = GUI.color;
                     GUI.color = MagnifyColor();
                     GUILayout.Label(MagnifyLine(), _label);
                     GUILayout.Label(MagnifyTimersLine(), _label);
+                    GUILayout.Label(RegistrationLine(), _label);
                     GUI.color = prevMag;
                 }
 
@@ -201,13 +206,40 @@ namespace CoralPolyps
             $"vuforia {(proximity.VuforiaTracked ? "trk" : "EXT")}";
 
         /// <summary>
+        /// Registration, in degrees — the half of the pose the distance readouts cannot see.
+        ///
+        /// WITH THE GATE OFF (the default, and where it should stay until this has been read):
+        /// `spin` is the solve's own frame-to-frame jitter in deg/s and `drift` is one frame of
+        /// it. **This is the number that sets implausibleSpinDegPerS.** Walk a slow circuit,
+        /// watch the peak `spin` during honest tracking, and put the threshold comfortably
+        /// above it — the gate is a teleport test, not a steadiness test, so erring loose costs
+        /// nothing and erring tight is catastrophic. The first attempt guessed 60 without
+        /// looking, which turned out to be at or below normal jitter, and the coral latched to
+        /// a stale pose and was flung around by the magnification anchor. See MAGNIFIER.md §3c.
+        ///
+        /// WITH THE GATE ON: `drift` becomes how far the live solve has twisted from the
+        /// orientation actually being drawn, because the reference stops advancing while a
+        /// solve is refused.
+        ///   * drift near 0 with rej climbing slowly  — flips are transient and being caught.
+        ///     This is the working state; the mesh does not visibly twist.
+        ///   * drift parked at 20-40deg and NOT falling — the tracker has settled on a wrong
+        ///     yaw and the gate has (correctly) given up refusing it. No filter recovers this;
+        ///     it means the symmetry has to be broken on the model target or the print.
+        ///   * rej climbing continuously from every angle — the threshold is below honest
+        ///     tracking. Turn the gate back OFF and re-read `spin`.
+        /// </summary>
+        string RegistrationLine() =>
+            $"rot: drift {proximity.SolveDriftDeg:F1}deg   spin {proximity.SolveSpinDegPerS:F0}deg/s   " +
+            $"{(proximity.LastSpinPlausible ? "ok" : "REJECTED")}   rej {proximity.SpinRejections}";
+
+        /// <summary>
         /// White at meso, green through the blend, blue at full micro — and amber the moment
         /// the pose is distrusted or the input is held, so a recording shows exactly when the
         /// picture stopped being live.
         /// </summary>
         Color MagnifyColor()
         {
-            if (proximity.TakeoverHeld || !proximity.LastPosePlausible)
+            if (proximity.TakeoverHeld || !proximity.LastPosePlausible || !proximity.LastSpinPlausible)
                 return new Color(1f, 0.8f, 0.3f);
             switch (proximity.State)
             {
