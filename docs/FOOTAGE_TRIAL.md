@@ -6,17 +6,22 @@ merged or deleted.
 
 ## What changed
 
-Three files, plus three new clips:
+Two things are being trialled together, because one implies the other: **new
+footage**, and **the app held landscape** to suit it.
 
 | | |
 |---|---|
 | `Assets/StreamingAssets/anya-*.mp4` | the new clips, re-encoded (below) |
 | `Assets/StreamingAssets/coral-ar.json` | `magnifier_clips` points at them |
 | `FullscreenMagnifier.footageWorldWidthStart` | `0.0096` → `0.0068`, in the field default **and** `CoralAR.unity` |
+| `ProjectSettings.asset` | portrait autorotation off; the two landscapes stay |
+| `MagnifierFullscreen.shader`, `MagnifierDefocus.cs` | portrait fallback constants corrected |
 
 Nothing in the magnifier's logic moved. `VideoMagnifierSource` reads clip names
 from config and sizes its RenderTextures from the clips themselves, so new
-footage is a config change plus one hand-derived constant.
+footage is a config change plus one hand-derived constant — and the orientation
+change is settings plus fallbacks, because everything aspect-dependent was
+already computed live.
 
 ## Where it came from
 
@@ -94,33 +99,67 @@ first number to re-judge on device**, and it is the only tuning value on this
 branch. It lives in two places — the field default and the serialized value in
 `CoralAR.unity` — and the scene wins at runtime.
 
-## Known consequence, not yet judged: the takeover crop
+## The app is now landscape
 
-The old clips are **portrait** (aspect 0.5625), close to a phone screen (~0.462).
-These are **landscape** (1.778). `MagnifierFullscreen.shader` cover-fits, so at
-full takeover:
+This footage is composed landscape, so the app is held landscape. That is the
+other half of the trial, and it is what makes the takeover work rather than
+crop away the subject.
+
+`MagnifierFullscreen.shader` cover-fits, so how much of the frame survives the
+takeover is `min(screen, footage) / max(screen, footage)`:
+
+| held | screen w/h | visible |
+|---|---|---|
+| portrait (before) | 0.462 | **26% of the width** |
+| iPhone, landscape | ~2.17 | 82% of the height |
+| iPad Pro 11", landscape | ~1.43 | 80% of the width |
+
+Portrait held the mouth and inner tentacles and threw away the outer ring —
+which is most of what separates the healthy frame from the bleached one. Turned
+sideways the whole corallite survives, and no clip had to be re-cropped to get
+there.
+
+Both landscapes are allowed, neither portrait is, so a visitor picking the device
+up either way round gets the same piece and it never flips on them mid-approach.
+
+### What that took
 
 ```
-  visible width = _ScreenAspect / _FootageAspect = 0.462 / 1.778 ≈ 0.26
+ProjectSettings.asset   allowedAutorotateToPortrait          1 -> 0
+                        allowedAutorotateToPortraitUpsideDown 1 -> 0
+                        (defaultScreenOrientation stays 4 = AutoRotation,
+                         now constrained to the two landscapes)
 ```
 
-You will see roughly the **middle quarter** of the frame's width. The corallite
-spans ~0.85 of that width, so the takeover will hold the mouth and inner
-tentacles and lose the outer tentacle ring — which is much of what makes the
-healthy and bleached frames read as different.
+Plus three portrait defaults that were only ever fallbacks, corrected so they do
+not lie: `_ScreenAspect`/`_FootageAspect` in `MagnifierFullscreen.shader`, and
+the `Screen.height > 0 ? ... : 0.5f` guards in `FullscreenMagnifier` and
+`MagnifierDefocus`.
 
-This was left alone on purpose. Cropping to portrait at encode time cuts the same
-tentacles, only blind and irreversibly; better to look at it and then decide. The
-loupe beat is unaffected — it samples triplanar across the coral and corrects for
-aspect, so it sees the whole frame either way.
+**Nothing else needed to move**, which is worth recording. Every aspect-dependent
+value in the magnifier is already computed live from `Screen.width/Screen.height`
+each frame — `screenAspect`, `CornerDistance()`, `_MagBlurAspect`,
+`_FootageAspect` off the clip's own dimensions — so the iris, the corner cap, the
+coverage readout and the radial blur all re-derive themselves on rotation. Vuforia
+handles the camera feed's orientation itself; there is nothing orientation-specific
+in `VuforiaConfiguration.asset`.
 
-If it reads badly, the options in rough order of cost:
+### And `footageWorldWidthStart` is unaffected by the rotation
 
-1. Re-encode with a portrait centre-crop — cheap, cuts the tentacle ring.
-2. Ask for a portrait regrade of the same source, if the original is higher
-   resolution than 1080p and can afford the crop.
-3. Let the takeover letterbox rather than cover-fit — a shader change, and it
-   would put bars on the exhibition's most committed moment.
+It is a **world length**, projected through the same camera as the coral, so the
+invariant it encodes — *the footage's corallite is drawn the same size as a real
+corallite cup* — holds in either orientation. It moved for the re-framing (above),
+not for the rotation. Don't touch it again when judging landscape.
+
+### Still to look at
+
+- The HUD (`CoralHud.Scale`) sizes off `Screen.height / 800`, which is the LONG
+  axis in portrait and the SHORT one in landscape — so the diagnostic text is
+  about half the size it used to be. Legible, but smaller. Left alone rather than
+  churned; `hud_enabled` is false for the exhibition anyway.
+- Whether the loupe beat still frames well in the hand at this orientation. The
+  loupe samples triplanar across the coral and corrects for aspect, so it was
+  never the part at risk — but it is the part nobody has looked at sideways.
 
 ## A/B-ing it
 

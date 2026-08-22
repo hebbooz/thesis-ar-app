@@ -52,8 +52,12 @@ Shader "CoralPolyps/MagnifierFullscreen"
         // 100% lets the polyps keep coming.
         _EndZoom ("Screen-fit zoom (1 = 100%)", Float) = 1
 
-        _ScreenAspect ("Screen w/h", Float) = 0.462
-        _FootageAspect ("Footage w/h", Float) = 0.5625
+        // Both are overwritten every frame — screen from Screen.width/height, footage
+        // from the clip itself — so these defaults only ever show in a material preview.
+        // Kept honest anyway: a landscape app playing landscape clips (see
+        // docs/FOOTAGE_TRIAL.md), not the portrait 0.462 / 0.5625 they used to be.
+        _ScreenAspect ("Screen w/h", Float) = 1.778
+        _FootageAspect ("Footage w/h", Float) = 1.778
         _Opacity ("Master opacity", Range(0, 1)) = 1
     }
 

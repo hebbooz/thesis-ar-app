@@ -344,7 +344,10 @@ namespace CoralPolyps
             }
             _image.enabled = true;
 
-            float screenAspect = Screen.height > 0 ? (float)Screen.width / Screen.height : 0.5f;
+            // Fallback is landscape 16:9 — the app is locked to the two landscapes
+            // (ProjectSettings), so a portrait 0.5 guess would be wrong in the one frame
+            // it could ever be used.
+            float screenAspect = Screen.height > 0 ? (float)Screen.width / Screen.height : 1.778f;
             bool held = proximity != null && proximity.TakeoverHeld;
             float corner = CornerDistance(screenAspect);
 

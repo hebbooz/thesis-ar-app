@@ -359,7 +359,9 @@ namespace CoralPolyps
         /// </summary>
         void PushRadial(float strength, Vector2 center, float innerRadius)
         {
-            float aspect = Screen.height > 0 ? (float)Screen.width / Screen.height : 0.5f;
+            // Landscape fallback, matching FullscreenMagnifier — the app no longer
+            // rotates to portrait.
+            float aspect = Screen.height > 0 ? (float)Screen.width / Screen.height : 1.778f;
             Shader.SetGlobalVector(MagBlurID,
                 new Vector4(center.x, center.y, innerRadius, innerRadius + Mathf.Max(radialFalloff, 0.01f)));
             Shader.SetGlobalVector(MagBlurParamsID, new Vector4(Mathf.Max(radialMaxRadius, 0f), strength, 0f, 0f));
