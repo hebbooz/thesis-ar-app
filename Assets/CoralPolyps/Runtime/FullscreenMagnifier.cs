@@ -112,17 +112,29 @@ namespace CoralPolyps
         // WHERE THE DEFAULT COMES FROM, so it can be re-judged rather than re-derived:
         // the baked map's median corallite pitch is 4.22 mm in the mesh's OBJECT units,
         // and SceneBuilder.AlignScale is 1.37, so a cup is 5.78 mm in the WORLD metres
-        // this field is measured in. The clip's central polyp fills roughly 0.6 of the
-        // frame width, so 5.78 / 0.6 puts that polyp at exactly one cup. The 0.6 is
-        // eyeballed from the footage and is the number to change if the emergence scale
-        // looks wrong on device — re-encoding the clips at a different framing changes
-        // it and nothing here will notice.
-        [Tooltip("Metres of coral spanned by the clip's WIDTH at emergence. At 0.0096 the " +
+        // this field is measured in. Divide that by the fraction of the FRAME WIDTH the
+        // clip's central corallite fills, and that corallite lands at exactly one cup.
+        // The fraction is eyeballed from the footage and is the number to change if the
+        // emergence scale looks wrong on device.
+        //
+        // THIS IS THE FIELD THE FOOTAGE TRIAL MOVES. It is a property of the CLIPS, not
+        // of the coral, so it must be re-derived whenever the clips are re-framed — and
+        // nothing here will notice if it is not:
+        //
+        //     *-microscale (portrait 720x1280)  fill 0.60  ->  5.78 / 0.60 = 0.0096
+        //     anya-*       (landscape 1920x1080) fill 0.85  ->  5.78 / 0.85 = 0.0068
+        //
+        // The anya set is a much tighter macro crop — one corallite nearly edge to edge
+        // rather than one among several — so it needs the smaller span. Left at 0.0096
+        // its polyps would emerge ~1.4x oversized and the lens would no longer read as
+        // resting on the surface at 1x. Swap this back with the clip names, together.
+        [Tooltip("Metres of coral spanned by the clip's WIDTH at emergence. Sized so the " +
                  "footage's central polyp is drawn the same size as a real corallite cup, " +
                  "so the magnifier starts at 1x and earns every bit of magnification after " +
                  "that. Larger than the opening is normal and intended: you see the middle " +
-                 "of the clip through a cup-sized hole.")]
-        public float footageWorldWidthStart = 0.0096f;
+                 "of the clip through a cup-sized hole. 0.0068 for the anya-* clips, " +
+                 "0.0096 for the *-microscale ones.")]
+        public float footageWorldWidthStart = 0.0068f;
 
         // WHERE THE GROWTH SITS ALONG THE ARC.
         //

@@ -942,7 +942,7 @@ MonoBehaviour:
   irisEdgeSoftness: 0.22
   irisWorldRadiusStart: 0.0029
   irisWorldRadiusEnd: 0.07
-  footageWorldWidthStart: 0.0096
+  footageWorldWidthStart: 0.0068
   irisGrowth:
     serializedVersion: 2
     m_Curve:

@@ -162,6 +162,9 @@ cup. The 0.6 is eyeballed from the footage and is the number to change if the em
 scale looks wrong — **re-encoding the clips at a different framing changes it and nothing
 in code will notice.**
 
+> Branch `trial/anya-footage` is the worked example: a tighter macro set fills 0.85 of the
+> frame instead of 0.6, taking this field to 0.0068. See `FOOTAGE_TRIAL.md`.
+
 **`_ContentRadius` is deliberately not clamped** by the silhouette leash or the corner
 cap. Those bound the *mask*, and a lens that is partly occluded still magnifies by the
 same amount. While they shared one variable the silhouette clamp silently changed the
