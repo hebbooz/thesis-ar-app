@@ -148,15 +148,15 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _DarkTissue: {r: 0.04, g: 0.07, b: 0.07, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _FloorColor: {r: 0.3160377, g: 0.61095715, b: 1, a: 1}
+    - _FloorColor: {r: 0.19023676, g: 0.49454263, b: 0.8962264, a: 1}
     - _HealthyColor: {r: 0.15, g: 1, b: 0.7, a: 1}
     - _LoupeCenter: {r: 0, g: 0, b: 0, a: 0}
-    - _NaturalFloorColor: {r: 0.33294767, g: 0.5471698, b: 0.4635709, a: 1}
-    - _NaturalWallColor: {r: 0.6415094, g: 0.5480654, b: 0.32983267, a: 1}
+    - _NaturalFloorColor: {r: 0.7736294, g: 0.8962264, b: 0.8471876, a: 1}
+    - _NaturalWallColor: {r: 0.8018868, g: 0.56318974, b: 0.23829654, a: 1}
     - _SkeletonColor: {r: 0.92, g: 0.9, b: 0.86, a: 1}
     - _SpecColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
     - _StressColor: {r: 0.7019608, g: 0.14901961, b: 1, a: 1}
-    - _WallColor: {r: 0.30308753, g: 1.5990514, b: 0.14331117, a: 1}
+    - _WallColor: {r: 0.15262297, g: 1.3896726, b: 0, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &1210170877523025901
