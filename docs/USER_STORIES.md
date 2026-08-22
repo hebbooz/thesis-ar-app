@@ -39,7 +39,10 @@ warms**, **so that** I feel the healthy-to-dying story of a warming reef.
   from it — two visitors standing at different distances see the same condition
   at the same moment (`docs/CONTROL_INTEGRATION.md` §3).
 - AC: The arc reads healthy → colourful surge → drained to white, driven by
-  `/coral/state` + `/coral/intensity` (Shader `_Stress`).
+  `/coral/cue` + `/coral/intensity` (Shader `_Stress`).
+- AC: The switch to bleached lands on the same beat as the soundscape, the lamp and
+  the projected reef — all four read the bar-quantised `/coral/cue` from one
+  datagram (`docs/CONTROL_INTEGRATION.md` §2).
 - AC: Backing away does **not** heal it. Bleaching latches on the server and heals
   only on the server's schedule — the cool button is not an undo.
 - AC: The magnifier's polyps match: alive when the reef is alive, fluorescent when

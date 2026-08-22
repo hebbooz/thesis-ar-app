@@ -15,14 +15,22 @@ Emitted as an OSC bundle at a fixed rate (default 5 Hz, configurable) to every s
 
 | Address | Type | Range | Meaning |
 |---|---|---|---|
-| `/coral/state` | int32 | 0–3 | Discrete phase — used to *switch* (which clip, which material set) |
+| `/coral/cue` | int32 | 0–3 | Discrete phase, bar-quantised — **what every output switches on** |
 | `/coral/intensity` | float32 | 0.0–1.0 | Continuous severity — used to *interpolate* (dim, cross-fade, colour) |
+| `/coral/latch` | float32 | 0.0–1.0 | Progress toward the bleach latch — the one *forward-looking* value |
+| `/coral/state` | int32 | 0–3 | The same phase, immediate and unquantised. Truth, not presentation |
 | `/coral/temp` | float32 | °C | Live temperature, for display and reference |
+
+`/coral/cue` is `state` held back to the next musical boundary when the server has
+Ableton's MIDI clock. Every output that changes *discretely* follows it — the audio
+bed, the lamp blackout, the projection's clip pair, this app's appearance — so they
+all change on one downbeat. It is identical to `/coral/state` when quantisation is
+off or the clock is silent. **Use `cue` to switch, `state` to know.**
 
 ### Subscriber contract
 
 Subscribers **MUST**:
-- Treat `intensity` as the primary continuous driver and `state` as the discrete selector.
+- Treat `intensity` as the primary continuous driver and `cue` as the discrete selector.
 - Apply values idempotently — the same values arrive repeatedly by design.
 - Boot assuming state 0 / intensity 0.0 and converge silently on the first message received.
 - Tolerate missing messages; hold the last known value.

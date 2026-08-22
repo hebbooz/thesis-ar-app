@@ -43,13 +43,21 @@ every screen in the room shows the same consequence at once.
 
 ### Inbound — server → this app, 5 Hz
 
-Delivered as **one OSC bundle** containing three messages:
+Delivered as **one OSC bundle**:
 
 | Address | Type | Range | Use |
 |---|---|---|---|
-| `/coral/state` | int32 | 0–3 | **Switch** on it (which appearance regime) |
+| `/coral/cue` | int32 | 0–3 | **Switch** on it (which appearance regime) |
 | `/coral/intensity` | float32 | 0.0–1.0 | **Interpolate** on it (the continuous driver) |
+| `/coral/latch` | float32 | 0.0–1.0 | Progress toward the bleach, ahead of it happening |
+| `/coral/state` | int32 | 0–3 | The same phase, unquantised. Display / diagnostics |
 | `/coral/temp` | float32 | °C | Display / diagnostics only |
+
+`cue` is `state` held back to a musical bar line when the server has Ableton's
+clock, so this app's appearance turns on the same downbeat as the projected reef,
+the audio bed and the lamp. `CoralOscListener.Cue` falls back to `State` until a
+`/coral/cue` actually arrives, so an older server degrades to immediate switching
+rather than freezing the coral at state 0.
 
 Default listen port: **UDP 9001** (`broadcast.client_port` in the server's config).
 
@@ -80,6 +88,7 @@ In extOSC this is one line, and the default is wrong:
 _receiver = gameObject.AddComponent<OSCReceiver>();
 _receiver.LocalPort = 9001;
 _receiver.Bind("/coral/state",     OnState);
+_receiver.Bind("/coral/cue",       OnCue);        // what the appearance switches on
 _receiver.Bind("/coral/intensity", OnIntensity);
 _receiver.Bind("/coral/temp",      OnTemp);
 _receiver.Connect();
@@ -226,19 +235,40 @@ special cases.
 before this app existed; replaying it would be a lie. (The projection player makes
 the identical exception.)
 
-### Emission during recovery
+### Fluorescence during recovery (revised 2026-08-16)
 
 State 3 walks `_Stress` from 1.0 down through the `_FluorPoint` band to 0, which
 would make the coral **flash fluorescent on its way out** — wrong: fluorescence is
 a stress response, and recovery should heal bleached → healthy *directly*.
 
-The shader already has the fix, and the current controller already uses it: hold
-`_EmissionScale = 0` while `state == 3`, then restore it to 1 on entering state 0
-(slew it over `crossfadeSeconds` so the glow doesn't pop back).
+The first fix held `_EmissionScale = 0` through state 3. **It produced a worse
+result than the problem it solved: bleached → black → healthy.** Killing the
+emission alone leaves the *base* colour still lerping to `_DarkTissue` across the
+fluorescent band, and that near-black is not a look in its own right — it is the
+lights-out backdrop that makes the glow read as glow. Dark with no glow is just a
+dead coral fading to black halfway through its recovery.
 
-Tuning decision you own: this makes the entire 45 s heal a non-glowing dull gold.
-That reads as "healing, not glowing" and is probably right, but check it on device —
-the alternative is easing emission back in over the last ~25 % of the ramp.
+So the glow and its dark backdrop are now **one dial**, `_FluorPresence`, held at 0
+through state 3 (`suppress_fluorescence_during_recovery`, slewed over
+`crossfadeSeconds`). With the middle stage collapsed the shader reads `_Stress` as a
+single natural ↔ skeleton crossfade, and `toWhite` widens from the `_FluorPoint..1`
+band to the whole `0..1` dial to match — without that widening the heal would finish
+visibly at the halfway mark and then sit still for the rest of the ramp.
+
+Two consequences worth knowing:
+
+- **The heal now spans the server's whole `recovery_ramp_s`** (45 s), because the
+  full 1.0 → 0.0 intensity ramp is spent going white → gold. Retiming it is still a
+  server config edit, with nothing to change here.
+- **No seam at either boundary.** At `stress` 1 and `stress` 0 both `toWhite` forms
+  agree, so `_FluorPresence` can move freely at 2 → 3 and 3 → 0. The slew earns its
+  keep on the backward 3 → 2 (a re-warm cancelling recovery), where fluorescence has
+  to come back without popping.
+
+Tuning decision you own: the heal is a straight desaturating fade from white
+skeleton to natural gold, never glowing. Check it on device — the alternative is
+easing `_FluorPresence` back in over the last ~25 % of the ramp, which trades the
+"the way out is not the way in" rule for a softer landing into state 0.
 
 ### 3.2 Magnifier → polyp footage
 
@@ -434,8 +464,9 @@ timings** (`CLAUDE.md`, control repo). At minimum:
   "client_id": "",
   "hello_interval_s": 5.0,
   "crossfade_s": 3.0,
+  "bleach_crossfade_s": 13.0,
   "fluor_point": 0.5,
-  "suppress_emission_during_recovery": true,
+  "suppress_fluorescence_during_recovery": true,
   "magnifier_source": "placeholder",
   "magnifier_clips": {
     "alive": "polyps-alive.mp4",
@@ -617,6 +648,16 @@ inside the other. If the tissue is drained to white while the loupe still shows
 green polyps for two seconds because their slews differ, the illusion breaks. The
 simple fix is one shared `crossfade_s` and one shared slew — which is what §3
 specifies. Confirm it holds on device.
+
+**Settled, 2026-08-19.** They share the rate, and they share the *exception* to it:
+the 1 → 2 latch alone slews at `bleach_crossfade_s` (13.0, so the tissue's
+`fluor_point` → 1 drain reads as ~6.5 s) in both layers. The bleach got its own
+number because the projection answers the same cue with a ~20 s fluorescent →
+bleached one-shot, and at the shared 3 s rate the coral in the hand had finished
+dying before the coral on the wall had started. Both layers test the same
+condition — cue 2 and the value still rising — so the choice cannot drift between
+them; giving the slow rate to the tissue only would have reversed their order and
+shown dead polyps inside a coral still half-fluorescent.
 
 **Repository cross-references — verified correct, no action needed.** This project
 is `github.com/hebbooz/thesis-ar-app`; the control repo is

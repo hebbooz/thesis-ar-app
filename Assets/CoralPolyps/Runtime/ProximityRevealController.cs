@@ -405,6 +405,28 @@ namespace CoralPolyps
         /// <summary>Current magnification factor (1 = life-size).</summary>
         public float Magnification { get; private set; } = 1f;
 
+        /// <summary>
+        /// The coral's world radius AS DRAWN, in metres: the radius of a sphere that covers
+        /// the mesh, times the magnification. This is what the takeover sizes its opening
+        /// against, so the footage reaches the coral the viewer can see rather than stopping
+        /// inside it.
+        ///
+        /// A BOUNDING SPHERE, NOT THE WORLD BOUNDING BOX, AND THAT IS §1's PROBLEM NOT A
+        /// TIDINESS ONE. `Renderer.bounds` is axis-aligned in WORLD space, so its extents
+        /// change as the coral is viewed from different angles — on this alignment
+        /// (AlignRotation is 304/247/260 deg, nowhere near axis-aligned) the box half-extents
+        /// run 82-103 mm depending on which axis you take. Sizing an arc from that would swell
+        /// and shrink the opening by a quarter as the visitor merely ROTATED the phone, with
+        /// `d` sitting still — which is exactly the failure §1 exists to forbid. The mesh's own
+        /// bounds are a constant, so this is a constant times k, and k is a pure function of d.
+        ///
+        /// Published rather than left for others to read off coralRenderer.bounds, because
+        /// this file resets the transform to base at the top of LateUpdate and re-scales it
+        /// at the bottom. Anything reading the renderer's bounds gets whichever of those it
+        /// happens to catch, and nothing here declares an execution order.
+        /// </summary>
+        public float CoralWorldRadiusM { get; private set; }
+
         public MagState State { get; private set; } = MagState.Meso;
         public float StateAgeS { get; private set; }
 
@@ -485,6 +507,10 @@ namespace CoralPolyps
         // whatever that child transform happens to be, silently.
         private Transform _pinSpace;
 
+        // The coral's covering radius at base scale, measured once. Constant by construction —
+        // see CoralWorldRadiusM.
+        private float _coralBaseRadiusM;
+
         // Label debounce. Purely cosmetic: it delays what the log and the HUD SAY, never what
         // the screen does.
         private MagState _pendingLabel = MagState.Meso;
@@ -548,6 +574,11 @@ namespace CoralPolyps
             // coralRoot, which may be a parent carrying the alignment offset.
             _pinSpace = coralRenderer.transform;
             ValidatePin();
+
+            // Measured here rather than per frame: the transform is at base scale before the
+            // first LateUpdate, and the mesh's own bounds never change.
+            _coralBaseRadiusM = MeasureCoralBaseRadius();
+            CoralWorldRadiusM = _coralBaseRadiusM;
 
             // Subscribe to the tracker's own verdict. The coral hangs under the Model Target,
             // so its ObserverBehaviour is in the parents.
@@ -782,6 +813,7 @@ namespace CoralPolyps
                 LoupeRadius = 0f;
                 FullscreenReveal = 0f;
                 Magnification = 1f;
+                CoralWorldRadiusM = _coralBaseRadiusM;
                 LoupeCenter = center;
                 PinnedIndex = -1;      // nothing measured yet; commit to no cup
                 PushLoupe();
@@ -830,6 +862,12 @@ namespace CoralPolyps
             float mt = InvLerpClamped(magnifyStartDistance, magnifyFullDistance, d);
             float k = Mathf.Lerp(1f, Mathf.Max(1f, maxMagnification), Mathf.Clamp01(magnifyCurve.Evaluate(mt)));
             Magnification = k;
+
+            // How big the coral is about to BE drawn. The takeover ends its opening here, so
+            // the footage reaches the coral the viewer sees rather than a fixed radius chosen
+            // back when the coral was life-size.
+            CoralWorldRadiusM = _coralBaseRadiusM * k;
+
             if (k > 1.0001f)
             {
                 // Where the scale radiates FROM.
@@ -905,6 +943,35 @@ namespace CoralPolyps
         {
             _euro.Reset(raw);
             return raw;
+        }
+
+        /// <summary>
+        /// The radius of a sphere covering the coral at BASE scale, in world metres. Measured
+        /// once, from the mesh's own bounds and the transform's world scale, because both are
+        /// constants — see <see cref="CoralWorldRadiusM"/> for why a per-frame world AABB is
+        /// not usable here.
+        ///
+        /// The max scale component rather than an average: a non-uniform scale would otherwise
+        /// under-cover along its longest axis, and this radius exists to cover.
+        /// </summary>
+        private float MeasureCoralBaseRadius()
+        {
+            var filter = coralRenderer.GetComponent<MeshFilter>();
+            Mesh mesh = filter != null ? filter.sharedMesh : null;
+            if (mesh == null)
+            {
+                // Falls back to the world box, which is orientation-dependent and so will make
+                // the opening breathe as the phone turns. Worth saying out loud rather than
+                // letting it be discovered as a mystery wobble.
+                Debug.LogWarning($"[{nameof(ProximityRevealController)}] no MeshFilter beside the " +
+                                 "coral renderer — sizing the takeover from the world bounding " +
+                                 "box instead, which changes with viewing angle.", this);
+                return coralRenderer.bounds.extents.magnitude;
+            }
+
+            Vector3 ls = coralRenderer.transform.lossyScale;
+            float s = Mathf.Max(Mathf.Abs(ls.x), Mathf.Max(Mathf.Abs(ls.y), Mathf.Abs(ls.z)));
+            return mesh.bounds.extents.magnitude * s;
         }
 
         /// <summary>

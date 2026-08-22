@@ -18,9 +18,18 @@
 /// from a build while it worked perfectly in the editor. The Shader.Find fallback below
 /// exists so the editor still works if you forget, and it logs loudly when it fires.
 ///
-/// With no MagnifierDefocus in the scene the globals are never set, strength stays 0, and
-/// the fragment shader returns the frame untouched on its first branch. Leaving the
-/// feature enabled costs one full-screen pass with an early-out; it is not a hazard.
+/// With no MagnifierDefocus in the scene the globals are never set and strength stays 0.
+/// The feature then enqueues NOTHING — see AddRenderPasses. That matters more than it
+/// sounds: the pass declares requiresIntermediateTexture, which pushes URP off the
+/// render-straight-to-backbuffer fast path for the whole camera. Paying that while the
+/// viewer is nowhere near the coral, for a shader that was going to early-out anyway, is
+/// the definition of a permanent tax for an occasional effect.
+///
+/// COST (2026-08-19). The blur runs at HALF RESOLUTION and is composited back at full —
+/// two passes, ~5.3 texture fetches per full-res pixel where one full-res pass cost 13.
+/// The shader header explains the split; the short version is that 13 scattered taps over
+/// ~2 M pixels was ~25 M fetches per frame on a phone, arriving exactly when the viewer
+/// leaned in, next to Vuforia and three video decodes.
 /// </summary>
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -42,6 +51,21 @@ namespace CoralPolyps
         public RenderPassEvent injectionPoint = RenderPassEvent.AfterRenderingPostProcessing;
 
         const string ShaderName = "CoralPolyps/MagnifierRadialBlur";
+
+        // Pass order in MagnifierRadialBlur.shader. Named rather than inlined because the
+        // two are trivially swappable and swapping them produces a screen that is blurred
+        // where it should be sharp — which looks like a mask bug, not an index bug.
+        const int PassBlur = 0;
+        const int PassComposite = 1;
+
+        // The strength MagnifierDefocus publishes. Read back here so the feature can decide
+        // whether to run at all without ever having to find the component — the same
+        // one-way, globals-only coupling the shader uses.
+        static readonly int MagBlurParamsID = Shader.PropertyToID("_MagBlurParams");
+
+        // Matches the shader's own early-out, so "enqueued" and "visibly does something"
+        // can never disagree.
+        const float MinStrength = 0.002f;
 
         Material _material;
         BlurPass _pass;
@@ -72,6 +96,12 @@ namespace CoralPolyps
             // in AlignCoralWindow impossible to judge, and costs a pass per extra camera.
             var type = renderingData.cameraData.cameraType;
             if (type != CameraType.Game && type != CameraType.SceneView) return;
+
+            // Nothing to blur: the viewer is far from the coral, the footage has already
+            // taken the whole screen, or there is no MagnifierDefocus at all. Returning
+            // here rather than letting the shader early-out is what lets URP keep the
+            // backbuffer fast path — see the class comment.
+            if (Shader.GetGlobalVector(MagBlurParamsID).y <= MinStrength) return;
 
             renderer.EnqueuePass(_pass);
         }
@@ -144,24 +174,81 @@ namespace CoralPolyps
                 }
 
                 desc.sizeMode = TextureSizeMode.Explicit;
+
+                // HALF RESOLUTION for the expensive pass. A quarter of the pixels, and the
+                // twelve scattered taps land four times closer together in memory — on a
+                // tile-based mobile GPU the locality is worth as much as the pixel count.
+                // Max(1, ...) because a 1 px-wide camera target is legal and a 0 px
+                // RenderTexture is not.
+                int hw = Mathf.Max(1, w / 2);
+                int hh = Mathf.Max(1, h / 2);
+
+                var halfDesc = desc;
+                halfDesc.name = "MagnifierRadialBlurHalf";
+                halfDesc.width = hw;
+                halfDesc.height = hh;
+                // A downsample target never wants MSAA, and inheriting it from the source
+                // would make the blit itself illegal. Stated rather than assumed, for the
+                // same reason the dimensions above are.
+                halfDesc.msaaSamples = MSAASamples.None;
+                halfDesc.filterMode = FilterMode.Bilinear;
+
                 desc.width = w;
                 desc.height = h;
 
                 if (!_loggedSize)
                 {
                     _loggedSize = true;
-                    Debug.Log($"[MagnifierBlurFeature] blur target {w}x{h}");
+                    Debug.Log($"[MagnifierBlurFeature] blur {hw}x{hh} -> composite {w}x{h}");
                 }
 
+                TextureHandle blurred = renderGraph.CreateTexture(halfDesc);
                 TextureHandle destination = renderGraph.CreateTexture(desc);
 
-                var blit = new RenderGraphUtils.BlitMaterialParameters(source, destination, _mat, 0);
-                renderGraph.AddBlitPass(blit, "MagnifierRadialBlur");
+                // 1. The blur itself, at half resolution.
+                var blit = new RenderGraphUtils.BlitMaterialParameters(source, blurred, _mat, PassBlur);
+                renderGraph.AddBlitPass(blit, "MagnifierRadialBlur (half)");
 
-                // Hand the blurred copy back as the camera colour so everything downstream
+                // 2. Composite at full resolution. This one needs BOTH the untouched source
+                // and the half-res blur, and AddBlitPass binds only one texture — hence the
+                // hand-rolled raster pass. _BlitTexture is the SOURCE, so the loupe interior
+                // comes back at native sharpness and the half-res image never reaches the
+                // part of the screen the viewer is looking at.
+                using (var builder = renderGraph.AddRasterRenderPass<CompositeData>(
+                           "MagnifierRadialBlur (composite)", out var data))
+                {
+                    data.material = _mat;
+                    data.source = source;
+                    data.blurred = blurred;
+
+                    builder.UseTexture(source, AccessFlags.Read);
+                    builder.UseTexture(blurred, AccessFlags.Read);
+                    builder.SetRenderAttachment(destination, 0, AccessFlags.WriteAll);
+
+                    builder.SetRenderFunc(static (CompositeData d, RasterGraphContext ctx) =>
+                    {
+                        d.material.SetTexture(BlurredID, d.blurred);
+                        Blitter.BlitTexture(ctx.cmd, d.source, ScaleBias, d.material, PassComposite);
+                    });
+                }
+
+                // Hand the composited copy back as the camera colour so everything downstream
                 // (and the final present) picks it up.
                 resources.cameraColor = destination;
             }
+
+            class CompositeData
+            {
+                public Material material;
+                public TextureHandle source;
+                public TextureHandle blurred;
+            }
+
+            static readonly int BlurredID = Shader.PropertyToID("_MagBlurred");
+
+            // Whole source rect, no flip. Named because a bare `new Vector4(1, 1, 0, 0)`
+            // in a blit call is the single easiest thing to mistake for a colour.
+            static readonly Vector4 ScaleBias = new Vector4(1f, 1f, 0f, 0f);
         }
     }
 }

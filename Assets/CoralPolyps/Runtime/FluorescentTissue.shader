@@ -43,7 +43,11 @@ Shader "CoralPolyps/FluorescentTissue"
         [HDR] _StressColor("(legacy, unused)", Color) = (1.0, 0.15, 0.7, 1)
         _EmissionStrength ("Fluorescent Emission Strength", Range(0, 8)) = 3.0
         _FluorPoint ("Stress at PEAK fluorescence", Range(0.1, 0.9)) = 0.5
-        _EmissionScale ("Emission scale (runtime; 0 during reset)", Range(0, 1)) = 1.0
+        // How much of the FLUORESCENT REGIME is expressed at all — the glow AND the
+        // lights-out dark base it is seen against, which are one look and must be
+        // suppressed together (see the arc code below). Driven to 0 through recovery
+        // so the coral heals bleached -> healthy directly.
+        _FluorPresence ("Fluorescent expression (runtime; 0 during recovery)", Range(0, 1)) = 1.0
 
         [Header(Honeycomb Pattern)]
         _AOMap      ("Occlusion / cavity map", 2D) = "white" {}
@@ -156,7 +160,7 @@ Shader "CoralPolyps/FluorescentTissue"
                 float4 _StressColor;
                 float  _EmissionStrength;
                 float  _FluorPoint;
-                float  _EmissionScale;
+                float  _FluorPresence;
                 float4 _AOMap_ST;
                 float  _AOContrast;
                 float  _ColorSplit;
@@ -236,8 +240,21 @@ Shader "CoralPolyps/FluorescentTissue"
                 // --- Three-stage arc: NATURAL -> FLUORESCENT -> BLEACHED ---
                 // 0.._FluorPoint climbs from natural into peak fluorescence;
                 // _FluorPoint..1 drains that glow away to the bare white skeleton.
-                float toFluor = smoothstep(0.0, _FluorPoint, stress);
-                float toWhite = smoothstep(_FluorPoint, 1.0, stress);
+                //
+                // _FluorPresence collapses the middle stage. It scales toFluor, which
+                // suppresses the glow AND the dark base together — the base falling to
+                // _DarkTissue is not a separate effect, it is the unlit backdrop the glow
+                // is seen against, and darkening without glowing is just black.
+                //
+                // With the middle stage gone the arc is a straight natural <-> skeleton
+                // crossfade, so toWhite has to span the WHOLE dial rather than only its
+                // top half — otherwise a heal timed across the full 0..1 ramp would finish
+                // visibly at the halfway mark and then sit still. At stress 0 and stress 1
+                // both forms agree, so _FluorPresence can move without a seam at either end.
+                float toFluor = smoothstep(0.0, _FluorPoint, stress) * _FluorPresence;
+                float toWhite = lerp(smoothstep(0.0, 1.0, stress),
+                                     smoothstep(_FluorPoint, 1.0, stress),
+                                     _FluorPresence);
                 float surgeBand = smoothstep(_FluorPoint * 0.55, _FluorPoint, stress) *
                                   (1.0 - smoothstep(_FluorPoint, _FluorPoint + (1.0 - _FluorPoint) * 0.6, stress));
 
@@ -253,7 +270,9 @@ Shader "CoralPolyps/FluorescentTissue"
 
                 // Fluorescent emission: ABSENT when natural, peaks mid-arc, drains when bleached.
                 float3 emissionCol = Desaturate(fluorCol, toWhite);
-                float intensity = _EmissionStrength * toFluor * (1.0 - toWhite) * _EmissionScale;
+                // toFluor already carries _FluorPresence, so the glow goes with the dark
+                // base by construction — there is no way to darken and not glow.
+                float intensity = _EmissionStrength * toFluor * (1.0 - toWhite);
                 intensity *= lerp(1.0, _SurgeBoost, surgeBand);
                 float pulse = 1.0 + sin(_Time.y * _PulseSpeed) * _PulseDepth * surgeBand;
                 intensity *= pulse;

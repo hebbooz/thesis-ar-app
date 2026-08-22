@@ -34,9 +34,27 @@ namespace CoralPolyps
         public bool logStateChanges = true;
 
         // --- What the server told us. Held, never derived. ---
+
+        /// <summary>Immediate, unquantised phase. Truth — use it to *know*.</summary>
         public int State { get; private set; }
+
+        /// <summary>
+        /// The phase to *switch* on: State held back to a musical bar line when the
+        /// server has Ableton's clock (PROTOCOL.md §1). Every output that changes
+        /// discretely reads this, so the polyps turn on the same downbeat as the
+        /// audio bed, the lamp blackout and the projected reef.
+        ///
+        /// Falls back to State until a /coral/cue actually arrives, so a server that
+        /// predates the address degrades to immediate switching rather than freezing
+        /// the coral at state 0.
+        /// </summary>
+        public int Cue => _cueReceived ? _cue : State;
+
         public float Intensity { get; private set; }
         public float Temp { get; private set; }
+
+        int _cue;
+        bool _cueReceived;
 
         /// <summary>True once any broadcast has arrived. Drives the "snap, don't slew"
         /// exception on first convergence — a rupture that happened before this app
@@ -67,6 +85,7 @@ namespace CoralPolyps
         float _lastRx;
         float _lastHello = -1f;
         int _lastLoggedState = -1;
+        int _lastLoggedCue = -1;
 
         void Awake()
         {
@@ -113,6 +132,7 @@ namespace CoralPolyps
                 _receiver = gameObject.AddComponent<OSCReceiver>();
                 _receiver.LocalPort = _cfg.listen_port;
                 _receiver.Bind("/coral/state", OnState);
+                _receiver.Bind("/coral/cue", OnCue);
                 _receiver.Bind("/coral/intensity", OnIntensity);
                 _receiver.Bind("/coral/temp", OnTemp);
                 _receiver.Connect();
@@ -181,6 +201,22 @@ namespace CoralPolyps
             {
                 Debug.Log($"[osc] state {_lastLoggedState} -> {State} ({StateName(State)}) intensity={Intensity:F2}");
                 _lastLoggedState = State;
+            }
+            Mark();
+        }
+
+        void OnCue(OSCMessage m)
+        {
+            if (!TryReadFloat(m, out float v)) return;
+            _cue = Mathf.Clamp(Mathf.RoundToInt(v), 0, 3);
+            _cueReceived = true;
+            // Logged separately from state: when quantisation is on, the gap between
+            // these two lines *is* the wait for the bar line, and it is the only
+            // record of it after the fact.
+            if (logStateChanges && _cue != _lastLoggedCue)
+            {
+                Debug.Log($"[osc] cue {_lastLoggedCue} -> {_cue} ({StateName(_cue)})");
+                _lastLoggedCue = _cue;
             }
             Mark();
         }

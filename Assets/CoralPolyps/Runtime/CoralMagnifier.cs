@@ -102,7 +102,10 @@ namespace CoralPolyps
         {
             if (_mat == null) return;
 
-            int state = useManualState ? manualState : (listener != null ? listener.State : 0);
+            // Cue, not State — matching CoralAppearance exactly. These two layers are
+            // seen together, one inside the other, so they must switch on the same
+            // value as well as agree about what it means.
+            int state = useManualState ? manualState : (listener != null ? listener.Cue : 0);
             float intensity = useManualState ? manualIntensity : (listener != null ? listener.Intensity : 0f);
 
             // State selects, intensity interpolates — the same rule as everywhere else.
@@ -135,11 +138,18 @@ namespace CoralPolyps
             }
             else
             {
-                // The SAME rate the tissue slews at (one shared crossfade_s), so the two
-                // layers — seen together, one inside the other — never disagree about how
-                // bleached the coral is. If the tissue drained to white while the loupe
-                // still showed green polyps, the illusion would break.
-                float step = Time.deltaTime / Mathf.Max(0.01f, _cfg.crossfade_s);
+                // The SAME rate the tissue slews at, so the two layers — seen together, one
+                // inside the other — never disagree about how bleached the coral is. If the
+                // tissue drained to white while the loupe still showed green polyps, the
+                // illusion would break.
+                //
+                // That includes the bleach's own slower rate. Taking crossfade_s here while
+                // the tissue took bleach_crossfade_s would not merely widen the gap between
+                // the two layers, it would REVERSE their order — the footage finishing at
+                // 3 s against a tissue still half-fluorescent at 6.5 s — so the polyps would
+                // be found already dead inside a coral that had not finished dying.
+                float rate = Bleaching(state, tDead) ? _cfg.bleach_crossfade_s : _cfg.crossfade_s;
+                float step = Time.deltaTime / Mathf.Max(0.01f, rate);
                 WAlive = Mathf.MoveTowards(WAlive, tAlive, step);
                 WFluorescent = Mathf.MoveTowards(WFluorescent, tFluoro, step);
                 WDead = Mathf.MoveTowards(WDead, tDead, step);
@@ -149,6 +159,13 @@ namespace CoralPolyps
         }
 
         bool ShouldSnap() => !_converged && (useManualState || (listener != null && listener.EverReceived));
+
+        /// <summary>
+        /// Travelling INTO the bleach, tested the same way CoralAppearance tests it — cue 2
+        /// and the dead weight still rising — so the two layers pick the same rate on the
+        /// same frame rather than each deciding for itself.
+        /// </summary>
+        bool Bleaching(int state, float targetDead) => state == 2 && targetDead > WDead;
 
         /// <summary>
         /// Push the two heaviest clips and the blend between them. At rest exactly two

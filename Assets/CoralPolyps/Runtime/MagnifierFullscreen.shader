@@ -27,9 +27,22 @@ Shader "CoralPolyps/MagnifierFullscreen"
         _Radius ("Iris radius (screen heights)", Float) = 0
         _Feather ("Iris edge softness", Range(0.0001, 0.5)) = 0.08
 
-        // 0 = footage fitted to the iris (crater scale), 1 = cover-fitted to the
-        // screen (100%). Driven by FullscreenMagnifier from coverage; the migration
-        // between the two is the emergence movement itself.
+        // HOW BIG THE POLYPS ARE, as opposed to how big the hole is. Same units as
+        // _Radius: the projected half-width of the clip, in screen heights.
+        //
+        // These used to be one number — the clip was fitted to the iris, so the
+        // footage's scale was whatever the mask happened to be. That made the polyps
+        // start at nothing: at emergence the whole frame was squeezed into a 3.6 mm
+        // opening, drawing a polyp at roughly a third of the cup it was coming out of,
+        // while the loupe underneath was drawing the same polyp several times larger.
+        // Splitting them lets the footage begin at 1:1 with the skeleton and magnify
+        // from there, which is what a lens does. Larger than _Radius means you see the
+        // middle of the clip through a smaller hole.
+        _ContentRadius ("Footage half-width (screen heights)", Float) = 0
+
+        // 0 = footage at crater scale (a physical size on the coral, _ContentRadius),
+        // 1 = cover-fitted to the screen (100%). Driven by FullscreenMagnifier from
+        // coverage; the migration between the two is the emergence movement itself.
         _Settle ("Crater fit -> screen fit", Range(0, 1)) = 0
 
         // Magnification of the SCREEN-FIT mapping, 1 = the clip at 100%. Screen fit is a
@@ -72,6 +85,7 @@ Shader "CoralPolyps/MagnifierFullscreen"
                 float  _Blend;
                 float4 _Center;
                 float  _Radius;
+                float  _ContentRadius;
                 float  _Feather;
                 float  _Settle;
                 float  _EndZoom;
@@ -103,10 +117,16 @@ Shader "CoralPolyps/MagnifierFullscreen"
 
                 // --- TWO MAPPINGS, AND THE JOURNEY BETWEEN THEM IS THE MOVEMENT.
                 //
-                // Mapping A — fitted to the IRIS. The clip's width spans the opening, so
-                // at emergence the clip's corallite is drawn at the same physical size as
-                // the skeleton's own cups and the rim is not a scale seam. This is what
-                // makes the opening read as a lens finding a cup.
+                // Mapping A — the clip at a PHYSICAL SIZE ON THE CORAL. Its width spans
+                // _ContentRadius, which is a world length at the crater projected each
+                // frame, so at emergence the clip's polyp is drawn at the same size as
+                // the skeleton's own cups: 1x, no magnification yet, the lens merely
+                // resting on the surface. This is what makes the opening read as a lens
+                // finding a cup rather than as a video starting to play.
+                //
+                // NOT the iris radius, which is what this used to be. Fitting the clip
+                // to the mask meant the footage's scale was decided by the hole, so the
+                // polyps began at roughly a third of a cup and had to swell to catch up.
                 //
                 // Mapping B — cover-fitted to the SCREEN. The clip at 100%, filling the
                 // frame edge to edge, overflow cropped, no bars, no distortion. This is
@@ -120,8 +140,8 @@ Shader "CoralPolyps/MagnifierFullscreen"
                 // Played backwards on the way out, the footage funnels back INTO the
                 // crater, which is the exit reading as the same lens withdrawing.
                 float2 uvI;
-                uvI.x = d.x / max(2.0 * _Radius, 1e-4);
-                uvI.y = d.y * _FootageAspect / max(2.0 * _Radius, 1e-4);
+                uvI.x = d.x / max(2.0 * _ContentRadius, 1e-4);
+                uvI.y = d.y * _FootageAspect / max(2.0 * _ContentRadius, 1e-4);
                 uvI += 0.5;
 
                 float2 uvS = IN.uv;

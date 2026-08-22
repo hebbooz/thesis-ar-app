@@ -940,8 +940,9 @@ MonoBehaviour:
   proximity: {fileID: 0}
   fullscreenShader: {fileID: 4800000, guid: b5a450959aa1d444aa079821439f947e, type: 3}
   irisEdgeSoftness: 0.22
-  irisWorldRadiusStart: 0.0018
+  irisWorldRadiusStart: 0.0029
   irisWorldRadiusEnd: 0.07
+  footageWorldWidthStart: 0.0096
   irisGrowth:
     serializedVersion: 2
     m_Curve:
@@ -966,7 +967,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  settleStartCoverage: 0.75
+  settleStartFraction: 0.5
   endZoomMax: 1
   endZoomStartCoverage: 0.72
   coralEdgeMargin: 0.9

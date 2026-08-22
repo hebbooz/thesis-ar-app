@@ -48,7 +48,7 @@ namespace CoralPolyps.EditorTools
             SetFloat(mat, "_NaturalBrightness", 1.0f);  // >1.2 clips the natural stage to white
             SetFloat(mat, "_EmissionStrength",  2.8f);  // orange/green have headroom, so can be driven
             SetFloat(mat, "_FluorPoint",        0.5f);  // peak fluorescence sits mid-arc
-            SetFloat(mat, "_EmissionScale",     1.0f);  // runtime reset suppressor; 1 = normal
+            SetFloat(mat, "_FluorPresence",     1.0f);  // runtime recovery suppressor; 1 = normal
             SetFloat(mat, "_Stress",            0.0f);  // rest at natural
 
             EditorUtility.SetDirty(mat);

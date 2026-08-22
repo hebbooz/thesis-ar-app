@@ -77,13 +77,52 @@ namespace CoralPolyps
         // because it is the same geometry doing it. Full coverage arrives on its own
         // when the projected circle outgrows the screen — no separate ramp needed.
         [Header("Iris size (metres on the coral)")]
-        [Tooltip("Radius when the takeover begins. A Goniastrea corallite is roughly 8 mm " +
-                 "across, so ~0.003 keeps the opening inside a single cup, between the walls.")]
-        public float irisWorldRadiusStart = 0.003f;
+        // ONE CUP ACROSS, IN THE UNITS THIS FIELD IS ACTUALLY READ IN. The baked map's
+        // median pitch is 4.22 mm in the mesh's OBJECT space, but ProjectedRadius offsets
+        // a WORLD point by `cam.transform.up * worldRadius` — and SceneBuilder.AlignScale
+        // is 1.37, so a cup is 5.78 mm out here. The previous 0.0018 was that object-space
+        // figure used as if it were world, which made the opening 0.62 of a cup while
+        // claiming to be one.
+        [Tooltip("Radius when the takeover begins, in WORLD metres. A corallite on this " +
+                 "scan is 5.78 mm across in world space, so 0.0029 is an opening of exactly " +
+                 "one cup — between the walls, which is the claim the pinning makes.")]
+        public float irisWorldRadiusStart = 0.0029f;
 
-        [Tooltip("Radius at full approach. Needs to be large enough that its projection " +
-                 "outruns the screen — around the coral's own radius works.")]
+        // A FLOOR NOW, NOT THE DESTINATION. The opening ends on the coral as drawn
+        // (ProximityRevealController.CoralWorldRadiusM); this only catches the case where that
+        // cannot be measured — no mesh, no controller — and keeps the old guarantee that the
+        // iris can still outrun the screen at the near end of the arc.
+        [Tooltip("Smallest allowed end-of-arc radius, in world metres. The opening normally " +
+                 "ends on the coral's own covering radius, which is larger; this is the floor " +
+                 "used if that cannot be measured. Large enough that its projection outruns " +
+                 "the screen at fullscreenFullDistance.")]
         public float irisWorldRadiusEnd = 0.075f;
+
+        // HOW BIG THE OPENING IS AND HOW BIG THE POLYPS ARE ARE TWO QUESTIONS.
+        //
+        // They used to be one number. The shader fitted the clip's width to the iris
+        // diameter, so the footage's scale was decided by the mask: at emergence the
+        // whole 720x1280 frame was squeezed into a 3.6 mm opening and the clip's central
+        // polyp drew about a THIRD of the cup it was supposedly coming out of. The loupe
+        // layer underneath was drawing that same polyp several times larger at the same
+        // instant, so the handover shrank the footage by an order of magnitude and the
+        // polyps then had to swell back — which is the "emerging from nothing" this
+        // separates out.
+        //
+        // WHERE THE DEFAULT COMES FROM, so it can be re-judged rather than re-derived:
+        // the baked map's median corallite pitch is 4.22 mm in the mesh's OBJECT units,
+        // and SceneBuilder.AlignScale is 1.37, so a cup is 5.78 mm in the WORLD metres
+        // this field is measured in. The clip's central polyp fills roughly 0.6 of the
+        // frame width, so 5.78 / 0.6 puts that polyp at exactly one cup. The 0.6 is
+        // eyeballed from the footage and is the number to change if the emergence scale
+        // looks wrong on device — re-encoding the clips at a different framing changes
+        // it and nothing here will notice.
+        [Tooltip("Metres of coral spanned by the clip's WIDTH at emergence. At 0.0096 the " +
+                 "footage's central polyp is drawn the same size as a real corallite cup, " +
+                 "so the magnifier starts at 1x and earns every bit of magnification after " +
+                 "that. Larger than the opening is normal and intended: you see the middle " +
+                 "of the clip through a cup-sized hole.")]
+        public float footageWorldWidthStart = 0.0096f;
 
         // WHERE THE GROWTH SITS ALONG THE ARC.
         //
@@ -105,11 +144,13 @@ namespace CoralPolyps
         public AnimationCurve irisGrowth = new AnimationCurve(
             new Keyframe(0f, 0f, 0f, 0f), new Keyframe(1f, 1f, 2.2f, 0f));
 
-        [Tooltip("Coverage at which the footage starts migrating from crater-fitted to " +
-                 "full-screen 100% (finishing at ~0.95). Kept LATE so the content stays " +
-                 "locked to crater scale for most of the approach — migrating early is " +
-                 "what made the footage read as too large from the very start.")]
-        [Range(0f, 0.9f)] public float settleStartCoverage = 0.75f;
+        [Tooltip("Where the footage starts migrating from crater scale to full-screen 100%, " +
+                 "as a fraction of the OPENING's native extent — 0.5 means the migration " +
+                 "begins when the opening is half the size the clip will be at 100%, and " +
+                 "completes exactly as it reaches it. Measured against the opening rather " +
+                 "than against coverage so the clip is never forced past native scale and " +
+                 "then pulled back; see the note in LateUpdate.")]
+        [Range(0.1f, 0.95f)] public float settleStartFraction = 0.5f;
 
         // SCREEN-FILLING IS THE RIGHT DESTINATION. Going past it crops into the clip, and
         // the thing that gets cropped away is the surrounding colony — the context that
@@ -163,11 +204,39 @@ namespace CoralPolyps
         /// every pixel. The only safe condition under which to hide the coral.</summary>
         public bool ScreenFullyCovered => ScreenCoverage01 >= 0.999f;
 
+        /// <summary>
+        /// Metres of coral the clip's WIDTH currently spans — the footage's magnification
+        /// expressed in the one unit that can be judged against the object it is coming
+        /// out of. At emergence it should read the corallite pitch (5.8 mm) divided by the
+        /// polyp's share of the frame, i.e. ~9.6 mm. Shown in the HUD because neither this
+        /// nor the leash below is observable from a plinth, and both are the numbers being
+        /// tuned.
+        /// </summary>
+        public float FootageWorldWidthM { get; private set; }
+
+        /// <summary>The silhouette leash applied this frame, in screen heights, after
+        /// coralEdgeMargin and before the release ramp. +inf means it could not be
+        /// measured and the corner cap is in sole charge.</summary>
+        public float LeashRadius { get; private set; } = float.PositiveInfinity;
+
+        /// <summary>
+        /// Which term is holding the opening down this frame: <c>arc</c> (the distance-driven
+        /// growth — the normal answer), <c>leash</c> (the coral's silhouette), or <c>cap</c>
+        /// (the screen corner, i.e. the takeover is complete).
+        ///
+        /// Exists because the iris radius is a three-way <c>Min</c> and the screen looks the
+        /// same whichever term wins, so a mis-sized cap is indistinguishable from a mis-shaped
+        /// curve by eye. Reading <c>leash</c> when the footage is cutting off inside the tissue
+        /// means the bound is wrong; reading <c>arc</c> means the growth is.
+        /// </summary>
+        public string IrisLimit { get; private set; } = "-";
+
         static readonly int TexAID   = Shader.PropertyToID("_TexA");
         static readonly int TexBID   = Shader.PropertyToID("_TexB");
         static readonly int BlendID  = Shader.PropertyToID("_Blend");
         static readonly int CenterID = Shader.PropertyToID("_Center");
         static readonly int RadiusID = Shader.PropertyToID("_Radius");
+        static readonly int ContentRadiusID = Shader.PropertyToID("_ContentRadius");
         static readonly int FeatherID = Shader.PropertyToID("_Feather");
         static readonly int SettleID = Shader.PropertyToID("_Settle");
         static readonly int EndZoomID = Shader.PropertyToID("_EndZoom");
@@ -180,6 +249,7 @@ namespace CoralPolyps
         Material _mat;
         Vector2 _center = new Vector2(0.5f, 0.5f);
         float _heldRadius;
+        float _heldContentRadius;
 
         void Awake()
         {
@@ -266,12 +336,11 @@ namespace CoralPolyps
             bool held = proximity != null && proximity.TakeoverHeld;
             float corner = CornerDistance(screenAspect);
 
-            // How far the footage has migrated from crater-fitted to screen-fitted
-            // (_Settle in the shader). Held late deliberately: the content stays locked
-            // to crater scale for most of the approach and only relaxes to 100%
-            // full-screen at the very end, once the rim is about to leave the frame.
-            float settle = Mathf.SmoothStep(0f, 1f,
-                Mathf.InverseLerp(settleStartCoverage, 0.95f, Coverage));
+            // The clip's half-width once cover-fitted to the screen, in the mask's units.
+            // This is the DESTINATION scale — where _Settle lands and where the footage
+            // stops magnifying — and it is the number the migration below is measured
+            // against rather than a coverage threshold. See the note on settleStartFraction.
+            float nativeHalf = Mathf.Max(FootageAspect(), screenAspect) * 0.5f;
 
             // The feather stays PROPORTIONAL the whole way. A soft rim is the optics of
             // the thing; tapering it away mid-flight produced a hard expanding circle,
@@ -282,13 +351,14 @@ namespace CoralPolyps
             // total. Soft whenever the rim is visible; pixel-crisp once it is not.
             float featherFrac = Mathf.Min(irisEdgeSoftness, 0.9f);
 
-            float radius;
+            float radius, contentRadius;
             if (held)
             {
                 // Pose untrusted: the controller has frozen Coverage, and the radius and
                 // centre freeze with it. Nothing is recomputed from the stale transform.
                 // Everything resumes from exactly here when trust returns.
                 radius = _heldRadius;
+                contentRadius = _heldContentRadius;
             }
             else
             {
@@ -302,7 +372,25 @@ namespace CoralPolyps
                 // still accelerating as it fills the screen instead of having arrived a
                 // third of the way back. See the note on irisGrowth.
                 float g = Mathf.Clamp01(irisGrowth.Evaluate(Coverage));
-                float worldRadius = Mathf.Lerp(irisWorldRadiusStart, irisWorldRadiusEnd, g);
+
+                // THE ARC ENDS ON THE CORAL, NOT ON A NUMBER.
+                //
+                // It used to end at a fixed irisWorldRadiusEnd, and that number was chosen to
+                // outgrow the SCREEN at 5 cm — never to cover the CORAL at 7-17 cm. They are
+                // not the same requirement and the coral is the larger one: this mesh's
+                // covering radius is ~105 mm at life size, so a 70 mm opening could not reach
+                // the coral's edge even before magnification, and the magnification arc then
+                // took the coral to 2.5x while the opening stayed put. The visible result is a
+                // ring of bare tissue around the footage that never closes — the dead space.
+                //
+                // Ending on ProximityRevealController.CoralWorldRadiusM makes the opening
+                // finish exactly covering the coral AS DRAWN, and grow with it. That value is
+                // a constant times the magnification, so this is still a pure function of `d`.
+                float worldEnd = Mathf.Max(
+                    proximity != null ? proximity.CoralWorldRadiusM : 0f,
+                    irisWorldRadiusEnd);
+
+                float worldRadius = Mathf.Lerp(irisWorldRadiusStart, worldEnd, g);
                 radius = ProjectedRadius(worldRadius);
 
                 // Cap where the OPAQUE CORE (radius - feather) reaches the far corner:
@@ -311,30 +399,104 @@ namespace CoralPolyps
                 // edges sat permanently inside the soft band (the "blurry ring").
                 float cornerCap = corner / (1f - featherFrac);
 
-                // THE IRIS STAYS ON THE CORAL — until the very end.
+                // THE IRIS STAYS ON THE CORAL — and this is now the BACKSTOP, not the rule.
                 //
-                // A lens can only magnify what it is held over, so for the bulk of the
-                // approach the opening is clamped to the coral's own on-screen
-                // silhouette. But that leash, left on, makes FULL SCREEN unreachable: the
-                // silhouette is measured conservatively (the smaller of the coral's
-                // on-screen half-height and half-width, times coralEdgeMargin), so it can
-                // sit below the corner distance even at maximum magnification, and the
-                // takeover could never complete.
+                // "A lens can only magnify what it is held over" used to be enforced here, by
+                // capping the opening at the coral's on-screen silhouette. It is now enforced
+                // by the arc's endpoint above, which is a better place for it: a cap can only
+                // ever make the opening smaller than the coral, which is precisely the dead
+                // ring this change exists to close. Driving it to the coral does the job the
+                // cap was standing in for.
                 //
-                // So the leash is released across the final stretch of the arc. Below
-                // clampReleaseCoverage the iris is strictly bounded by the coral; above
-                // it, the bound opens out to the corner cap and maximum magnification
-                // always fills every pixel. By then the coral fills the frame anyway, so
-                // the two bounds are nearly the same number and the release is invisible.
-                float silhouette = CoralSilhouetteRadius(screenAspect) * coralEdgeMargin;
+                // What survives is a guard against the endpoint being wrong — worldEnd falls
+                // back to irisWorldRadiusEnd when the coral cannot be measured — plus the
+                // release, which is still what guarantees the takeover can reach every pixel.
+                // Below clampReleaseCoverage the opening is bounded by the coral; above it the
+                // bound opens out to the corner cap.
+                //
+                // In normal service this no longer binds: worldEnd IS the coral's radius, so
+                // the arc can only reach the cap at g = 1, by which point the release has
+                // opened it. "The coral" means the coral AS DRAWN — magnified — not the print
+                // it is registered to. See CoralSilhouetteRadius.
+                float silhouette = CoralSilhouetteRadius() * coralEdgeMargin;
+                LeashRadius = silhouette;
                 float release = Mathf.SmoothStep(0f, 1f,
                     Mathf.InverseLerp(clampReleaseCoverage, 1f, Coverage));
-                float leash = Mathf.Lerp(silhouette, cornerCap, release);
 
-                radius = Mathf.Min(radius, Mathf.Max(leash, 0f));
-                radius = Mathf.Min(radius, cornerCap);
+                // "Could not be measured" has to mean NO LEASH, not a NaN. Lerp is
+                // a + (b-a)*t, so from +inf that is inf + (-inf)*t — NaN for every t,
+                // including 0 — and a NaN radius makes the iris vanish rather than open.
+                // The corner cap below is the answer either way.
+                float leash = float.IsPositiveInfinity(silhouette)
+                    ? cornerCap
+                    : Mathf.Lerp(silhouette, cornerCap, release);
+
+                // WHICH OF THE THREE WON. min(a, b, c) throws that away, and not knowing it
+                // cost a whole build cycle: the leash was fixed while the ARC was the term
+                // actually holding the opening down, and the screen looks identical either
+                // way. One word in the HUD is the difference between reading it and guessing.
+                float bound = Mathf.Min(Mathf.Max(leash, 0f), cornerCap);
+                IrisLimit = radius <= bound ? "arc"
+                          : cornerCap <= Mathf.Max(leash, 0f) ? "cap" : "leash";
+                radius = Mathf.Min(radius, bound);
+
+                // THE FOOTAGE'S OWN SCALE — resolved AFTER the opening, because it has to
+                // answer to it.
+                //
+                // Its own arc is the emergence: one polyp at life size, magnifying as the
+                // viewer leans in. The Max is the fill constraint — mapping A draws the clip
+                // across _ContentRadius, so an opening WIDER than the clip runs the UVs
+                // outside [0,1] and the rim fills with whatever the RenderTexture's wrap mode
+                // does. The clip must be at least as wide as the hole it is seen through.
+                //
+                // Tying the content's ENDPOINT to the opening's was the wrong way to satisfy
+                // that. The opening now ends on the coral (up to 262 mm), so the footage got
+                // dragged to ~3x native scale mid-arc and _Settle's migration to native then
+                // pulled it back out — the footage zoomed in and visibly retracted. A Max
+                // costs the same and only binds when it must, so the clip is never drawn
+                // larger than the hole actually requires.
+                //
+                // NOT clamped by the leash or the corner cap: those bound the MASK, and a lens
+                // that is partly occluded still magnifies by the same amount.
+                float contentWorldRadius =
+                    Mathf.Lerp(footageWorldWidthStart * 0.5f, irisWorldRadiusEnd, g);
+                contentRadius = Mathf.Max(ProjectedRadius(contentWorldRadius), radius);
+
+                float perMetre = ProjectedRadius(1f);
+                FootageWorldWidthM = perMetre > 1e-6f ? 2f * contentRadius / perMetre : 0f;
+
                 _heldRadius = radius;
+                _heldContentRadius = contentRadius;
             }
+
+            // THE MIGRATION IS MEASURED AGAINST THE OPENING, NOT AGAINST COVERAGE.
+            //
+            // _Settle carries the footage from crater-fitted (mapping A, a physical size on
+            // the coral) to screen-fitted (mapping B, the clip at native 100%). It used to run
+            // on a pair of coverage thresholds, and that only worked while the opening grew
+            // slowly enough to still be smaller than the clip when the migration began.
+            //
+            // Three requirements meet here and two of them are hard:
+            //   * the opening must be big     — it has to reach the tissue's edge
+            //   * the clip must fill the opening — or mapping A samples off the end of the video
+            //   * the clip must END at native — that is where mapping B lands
+            // An opening larger than the clip-at-native forces the clip PAST native, and
+            // _Settle then has to bring it back down. That overshoot-and-retract is exactly
+            // what a coverage threshold cannot prevent, because it does not know how big the
+            // opening got.
+            //
+            // Measuring against nativeHalf removes the failure rather than tuning around it:
+            // the migration completes precisely as the opening reaches the clip's native
+            // extent, so the clip is never required to exceed native and never has to come
+            // back. It is also self-tuning — retune irisGrowth or the arc distances and this
+            // still lands in the right place, where two hand-picked coverage numbers would
+            // silently drift.
+            //
+            // The old reason for keeping it late holds automatically: early in the approach
+            // the opening is a few millimetres, far below the start fraction, so the footage
+            // stays at crater scale and does not read as too large from the very start.
+            float settle = Mathf.SmoothStep(0f, 1f,
+                Mathf.InverseLerp(nativeHalf * settleStartFraction, nativeHalf, radius));
 
             // Fade the first instant so the opening does not pop into existence at full
             // strength; after that the geometry alone carries it.
@@ -351,6 +513,7 @@ namespace CoralPolyps
             _mat.SetFloat(BlendID, _magnifier.Blend);
             _mat.SetVector(CenterID, new Vector4(_center.x, _center.y, 0f, 0f));
             _mat.SetFloat(RadiusID, radius);
+            _mat.SetFloat(ContentRadiusID, Mathf.Max(contentRadius, 1e-5f));
             _mat.SetFloat(FeatherID, Mathf.Max(radius * featherFrac, 1e-4f));
             _mat.SetFloat(SettleID, settle);
 
@@ -414,36 +577,44 @@ namespace CoralPolyps
         }
 
         /// <summary>
-        /// The coral's own projected radius on screen, in the mask's units (screen
-        /// heights). This is the leash that keeps the iris on the coral: measured from
-        /// the renderer's bounds along the camera's up and right axes, taking the
-        /// smaller of the two so the clamp stays conservatively INSIDE the silhouette
-        /// (the bounds themselves overestimate an irregular dome). Returns +inf when it
-        /// cannot be measured, which simply leaves the other caps in charge.
+        /// The coral's projected radius on screen, in the mask's units (screen heights).
+        /// This is the leash that keeps the iris on the coral.
+        ///
+        /// MEASURED AT THE CRATER, WHICH IS THE WHOLE FIX. It used to project the coral's
+        /// bounds from the BOUNDS CENTRE while the iris was projected from LoupeCenter —
+        /// two different depths, then compared with a Min as though they were the same
+        /// quantity. The coral's own half-extents are ~70 mm, and the magnification block
+        /// makes the gap far worse rather than merely imprecise: scaling about the pinned
+        /// cup pins the ANCHOR, so the bounds centre retreats by (k-1) x the anchor-to-
+        /// centre distance. At 5 cm and k = 2.5 the near face is 0.05 m from the camera
+        /// while the centre is ~0.22 m, so the leash was computed as if the coral were a
+        /// flat disc four and a half times further away than the surface being looked at.
+        ///
+        /// The visible result was the footage cutting off well inside the magnified
+        /// tissue: the video stopped at roughly where the PRINT ends while the health
+        /// material carried on past it.
+        ///
+        /// Projecting through ProjectedRadius fixes the second, quieter half of the same
+        /// error too — the old measurement was a radius about the CORAL's centre, but the
+        /// iris is centred on the pinned corallite, which can sit near the rim. Both are
+        /// now measured from the same point.
+        ///
+        /// The world radius comes from ProximityRevealController rather than being
+        /// re-derived from coralRenderer.bounds here. That component owns the coral's
+        /// transform and knows the magnification, and reading its output removes an
+        /// unstated dependency on which of the two LateUpdates happens to run first —
+        /// neither declares an execution order, so today's answer is arbitrary.
+        ///
+        /// Returns +inf when it cannot be measured, which simply leaves the other caps
+        /// in charge rather than shutting the iris.
         /// </summary>
-        float CoralSilhouetteRadius(float screenAspect)
+        float CoralSilhouetteRadius()
         {
-            var cam = proximity != null ? proximity.cam : null;
-            var rend = proximity != null ? proximity.coralRenderer : null;
-            if (cam == null || rend == null) return float.PositiveInfinity;
+            float worldRadius = proximity != null ? proximity.CoralWorldRadiusM : 0f;
+            if (worldRadius <= 0f) return float.PositiveInfinity;
 
-            Bounds b = rend.bounds;
-            Vector3 c = b.center;
-            Vector3 vpC = cam.WorldToViewportPoint(c);
-            if (vpC.z <= 0f) return float.PositiveInfinity;
-
-            // Bounds extents are world-axis-aligned; project them onto the camera's own
-            // axes the same way the proximity controller measures its surface offset.
-            Vector3 e = b.extents;
-            Vector3 up = cam.transform.up, right = cam.transform.right;
-            float extUp = Mathf.Abs(up.x) * e.x + Mathf.Abs(up.y) * e.y + Mathf.Abs(up.z) * e.z;
-            float extRight = Mathf.Abs(right.x) * e.x + Mathf.Abs(right.y) * e.y + Mathf.Abs(right.z) * e.z;
-
-            Vector3 vpUp = cam.WorldToViewportPoint(c + up * extUp);
-            Vector3 vpRight = cam.WorldToViewportPoint(c + right * extRight);
-            float rUp = Mathf.Abs(vpUp.y - vpC.y);
-            float rRight = Mathf.Abs(vpRight.x - vpC.x) * screenAspect;
-            return Mathf.Min(rUp, rRight);
+            float projected = ProjectedRadius(worldRadius);
+            return projected > 0f ? projected : float.PositiveInfinity;   // behind the camera
         }
 
         float FootageAspect()

@@ -441,20 +441,46 @@ namespace CoralPolyps
             fullscreen.proximity = proximity;
             proximity.fullscreen = fullscreen;   // so the coral is hidden on REAL coverage
 
-            // The iris has to be able to outgrow the screen at the distance the arc now
-            // finishes. At 5.5 cm a 4 cm world radius projects to roughly the corner
-            // distance, which leaves the opaque core short of it and the screen edges
-            // permanently inside the soft rim. 7 cm clears it with margin.
+            // A FLOOR, NOT THE DESTINATION — and the distinction is the whole of the dead-ring
+            // bug. This number was sized to outgrow the SCREEN at the near end of the arc (at
+            // 5.5 cm a 4 cm world radius only just reaches the corner, so 7 cm clears it with
+            // margin), which is a different requirement from covering the CORAL, and the
+            // smaller of the two. This mesh's covering radius is ~105 mm at life size, so a
+            // 70 mm opening could never reach its edge even before the magnification arc took
+            // the coral to 2.5x. The opening now ends on CoralWorldRadiusM and this only
+            // catches the case where the coral cannot be measured at all.
             fullscreen.irisWorldRadiusEnd = 0.07f;
 
-            // AND THE OPENING MUST FIT IN ONE CUP. The old 0.003 (a 6 mm opening) was
-            // justified by "a Goniastrea corallite is roughly 8 mm across" — but the baked
-            // map for THIS scan has a median nearest-neighbour pitch of 4.2 mm, so a 6 mm
-            // opening straddles two or three cups at the exact moment it is supposed to sit
-            // inside one. That was survivable while the centre was a free-aimed cursor; now
-            // that the reveal pins to a specific corallite, an opening wider than the cup
-            // contradicts the claim it is making.
-            fullscreen.irisWorldRadiusStart = 0.0018f;
+            // AND THE OPENING MUST FIT IN ONE CUP — IN THE UNITS THE FIELD IS READ IN.
+            //
+            // This has now been wrong twice in opposite directions. The original 0.003 was
+            // justified by "a Goniastrea corallite is roughly 8 mm across", which is the
+            // species in general and not this scan. The 0.0018 that replaced it used the
+            // baked map's median pitch of 4.2 mm — correct for the map, but that figure is in
+            // the mesh's OBJECT space, and irisWorldRadiusStart is consumed in WORLD metres
+            // (FullscreenMagnifier.ProjectedRadius offsets a world point by cam.up * r). With
+            // AlignScale at 1.37 a cup is 5.78 mm out there, so 0.0018 made the opening 0.62
+            // of a cup while the comment claimed it was one.
+            //
+            // 0.0029 is one cup across, measured on this scan, in the right space.
+            fullscreen.irisWorldRadiusStart = 0.0029f;
+
+            // HOW BIG THE OPENING IS AND HOW BIG THE POLYPS ARE ARE TWO QUESTIONS.
+            //
+            // They used to be one: the shader fitted the clip's width to the iris diameter,
+            // so the footage's scale was whatever the mask happened to be. At emergence the
+            // whole frame was squeezed into the opening and the central polyp drew about a
+            // third of the cup it was coming out of — while the loupe layer underneath was
+            // drawing that same polyp several times larger. The handover shrank the footage
+            // by an order of magnitude and the polyps then swelled back, which is the
+            // "emerging from nothing" this number ends.
+            //
+            // A cup is 5.78 mm and the clip's central polyp fills roughly 0.6 of the frame
+            // width, so 5.78 / 0.6 draws that polyp at exactly one cup: the magnifier starts
+            // at 1x, resting on the surface, and earns every bit of magnification after that.
+            // The 0.6 is eyeballed from the footage — re-encoding the clips at a different
+            // framing changes it and nothing in code will notice.
+            fullscreen.footageWorldWidthStart = 0.0096f;
 
             // The pin itself. Without the map the loupe silently falls back to the old
             // per-frame raycast, which is the sliding behaviour, so a missing asset is

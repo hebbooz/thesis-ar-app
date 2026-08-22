@@ -39,11 +39,14 @@ namespace CoralPolyps
         /// <summary>Applied stress, after the slew. Read by the HUD — showing this next
         /// to the received state is what separates a network fault from a mapping fault.</summary>
         public float Stress { get; private set; }
-        public float EmissionScale { get; private set; } = 1f;
+
+        /// <summary>How much of the fluorescent regime the shader expresses, after the
+        /// slew: 1 everywhere except recovery, 0 through it. Read by the HUD.</summary>
+        public float FluorPresence { get; private set; } = 1f;
 
         static readonly int StressID = Shader.PropertyToID("_Stress");
         static readonly int FluorPointID = Shader.PropertyToID("_FluorPoint");
-        static readonly int EmissionScaleID = Shader.PropertyToID("_EmissionScale");
+        static readonly int FluorPresenceID = Shader.PropertyToID("_FluorPresence");
 
         CoralConfig _cfg;
         Material _mat;
@@ -74,7 +77,7 @@ namespace CoralPolyps
 
             // CLAUDE.md §9 rule 3: boot to Natural and converge silently.
             Stress = 0f;
-            EmissionScale = 1f;
+            FluorPresence = 1f;
             Push();
         }
 
@@ -82,11 +85,20 @@ namespace CoralPolyps
         {
             if (_mat == null) return;
 
-            int state = useManualState ? manualState : (listener != null ? listener.State : 0);
+            // Cue, not State: the bar-quantised twin, so the tissue turns on the same
+            // downbeat as the projected reef, the audio bed and the lamp. Intensity
+            // stays immediate — it is the continuous driver and must never be stepped.
+            int state = useManualState ? manualState : (listener != null ? listener.Cue : 0);
             float intensity = useManualState ? manualIntensity : (listener != null ? listener.Intensity : 0f);
 
             float targetStress = TargetStress(state, intensity);
-            float targetEmission = (_cfg.suppress_emission_during_recovery && state == 3) ? 0f : 1f;
+
+            // Recovery heals bleached -> healthy DIRECTLY. Collapsing the fluorescent
+            // regime is what makes that a single crossfade instead of a detour: the
+            // shader then reads _Stress as one natural <-> skeleton dial, so the whole
+            // 1.0 -> 0.0 ramp the server sends across recovery_ramp_s is spent going
+            // white -> gold, and nothing has to be retimed here when that config changes.
+            float targetPresence = (_cfg.suppress_fluorescence_during_recovery && state == 3) ? 0f : 1f;
 
             if (ShouldSnap())
             {
@@ -96,18 +108,27 @@ namespace CoralPolyps
                 // makes the identical exception.)
                 _converged = true;
                 Stress = targetStress;
-                EmissionScale = targetEmission;
+                FluorPresence = targetPresence;
             }
             else
             {
-                // One rate doing three jobs: it never limits ordinary warming (~0.006/s
-                // against a slew of ~0.33/s), it shapes the latch jump into a ~2 s drain
-                // to white, and it softens the two backward transitions — 3→2 (a re-warm
-                // cancelling recovery) and 2→1 (the idle reset with hot water). Both are
-                // real and reachable; the arc does not only run forwards.
-                float step = Time.deltaTime / Mathf.Max(0.01f, _cfg.crossfade_s);
+                // One rate doing two jobs: it never limits ordinary warming (~0.006/s
+                // against a slew of ~0.33/s), and it softens the two backward transitions —
+                // 3→2 (a re-warm cancelling recovery) and 2→1 (the idle reset with hot
+                // water). Both are real and reachable; the arc does not only run forwards.
+                //
+                // The third job — shaping the latch jump into a drain to white — moved to
+                // its own rate, because that drain has to sit alongside the projection's
+                // ~20 s one-shot answering the same cue while these two keep their ordinary
+                // pace. See CoralConfig.bleach_crossfade_s.
+                float rate = Bleaching(state, targetStress) ? _cfg.bleach_crossfade_s : _cfg.crossfade_s;
+                float step = Time.deltaTime / Mathf.Max(0.01f, rate);
                 Stress = Mathf.MoveTowards(Stress, targetStress, step);
-                EmissionScale = Mathf.MoveTowards(EmissionScale, targetEmission, step);
+
+                // The presence slew is invisible at the 2->3 and 3->0 boundaries (both
+                // shader forms agree at stress 1 and stress 0), so it exists for the
+                // backward 3->2 re-warm, where fluorescence has to come back without a pop.
+                FluorPresence = Mathf.MoveTowards(FluorPresence, targetPresence, step);
             }
 
             Push();
@@ -115,12 +136,25 @@ namespace CoralPolyps
 
         bool ShouldSnap() => !_converged && (useManualState || (listener != null && listener.EverReceived));
 
+        /// <summary>
+        /// Are we currently travelling INTO the bleach? Only then does the slow rate apply.
+        ///
+        /// Direction is half the test on purpose. Cue 2 is also where a re-warm lands when
+        /// it cancels a recovery (3→2), and that arrives from below too, so it is a bleach
+        /// as well and is meant to be slow. What the direction test excludes is the moment
+        /// the cue is still 2 while stress is already at 1.0 and has nowhere to go — there
+        /// the rate is moot — and, more usefully, it keeps the slow rate from ever leaking
+        /// onto the way out: recovery is cue 3, and the heal is the server's ramp to pace,
+        /// not ours.
+        /// </summary>
+        bool Bleaching(int state, float targetStress) => state == 2 && targetStress > Stress;
+
         void Push()
         {
             // Idempotent by design — the same values arrive 5x/second and applying
             // them repeatedly must be harmless.
             _mat.SetFloat(StressID, Stress);
-            _mat.SetFloat(EmissionScaleID, EmissionScale);
+            _mat.SetFloat(FluorPresenceID, FluorPresence);
         }
 
         /// <summary>
@@ -133,7 +167,10 @@ namespace CoralPolyps
         ///   intensity carries no information and the constant is honest.
         /// - State 3 passes intensity straight through. The server ramps it 1.0 → 0.0
         ///   across recovery_ramp_s, so the heal retimes from the server's config file
-        ///   with no rebuild and no reauthoring here.
+        ///   with no rebuild and no reauthoring here. Paired with _FluorPresence = 0
+        ///   above, that ramp is one unbroken bleached → healthy crossfade: the dial
+        ///   no longer passes through a fluorescent stage on the way down, so there is
+        ///   nothing to suppress and no dark middle to fall into.
         /// </summary>
         float TargetStress(int state, float intensity) => state switch
         {

@@ -39,7 +39,7 @@ namespace CoralPolyps
     public class CoralConfig
     {
         // --- Network (CONTROL_INTEGRATION.md §2) ---
-        public string server_host = "192.168.8.10";
+        public string server_host = "192.168.50.10";
         public int server_port = 9000;      // the server's OSC listener (broadcast.listen_port)
         public int listen_port = 9001;      // our socket (broadcast.client_port)
 
@@ -62,6 +62,30 @@ namespace CoralPolyps
         public float crossfade_s = 3.0f;
 
         /// <summary>
+        /// The same slew, but for the one transition that is not a fade between two looks:
+        /// the 1 → 2 bleach latch. Seconds for a full 0 → 1 sweep, so the tissue's own
+        /// drain — which only travels fluor_point → 1 — takes HALF this.
+        ///
+        /// It exists because that moment is the rupture the whole room is built around, and
+        /// the phone is not the only screen telling it. The projection answers the same cue
+        /// by playing a ~20 s fluorescent → bleached one-shot; at the shared 3 s rate the
+        /// tissue was white in about 1.5 s, so the coral in the hand had finished dying
+        /// before the coral on the wall had started. The phone should still arrive first —
+        /// it is the intimate view, and the beat belongs to it — but by a couple of
+        /// heartbeats, not by the whole scene.
+        ///
+        /// Separating it from <see cref="crossfade_s"/> is the point: raising the shared
+        /// rate to slow this one drain would also slow the two backward transitions, and
+        /// would put the slew limit (1/13 per second) close enough to the server's
+        /// recovery ramp to start shaping a heal the server is supposed to own.
+        ///
+        /// Applied by BOTH the tissue and the magnifier, for the same reason they share
+        /// crossfade_s everywhere else — they are seen together, one inside the other, and
+        /// slowing only the tissue would let the polyps finish dying first.
+        /// </summary>
+        public float bleach_crossfade_s = 13.0f;
+
+        /// <summary>
         /// Where peak fluorescence sits on the shader's 0..1 _Stress dial. States 0/1
         /// are capped at this, which is what makes it structurally impossible for the
         /// app to bleach itself — only the server's latch goes past it.
@@ -69,10 +93,17 @@ namespace CoralPolyps
         public float fluor_point = 0.5f;
 
         /// <summary>
-        /// Hold emission at 0 through state 3 so the coral heals bleached → healthy
-        /// directly instead of flashing fluorescent on its way out (§3.1).
+        /// Collapse the fluorescent stage of the arc through state 3 (shader
+        /// `_FluorPresence` → 0), so the coral heals bleached → healthy as one direct
+        /// crossfade instead of flashing fluorescent — or falling through the unlit
+        /// dark the glow is normally seen against — on its way out (§3.1).
+        ///
+        /// Renamed from `suppress_emission_during_recovery`: suppressing only the
+        /// emission left the dark base behind, which is what made the heal read as a
+        /// fade through black. An older config file carrying the old key simply leaves
+        /// this at its default, which is the behaviour that key asked for anyway.
         /// </summary>
-        public bool suppress_emission_during_recovery = true;
+        public bool suppress_fluorescence_during_recovery = true;
 
         // --- Magnifier (CONTROL_INTEGRATION.md §3.3) ---
         /// <summary>

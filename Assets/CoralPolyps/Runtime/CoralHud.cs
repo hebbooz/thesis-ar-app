@@ -98,7 +98,15 @@ namespace CoralPolyps
                 GUILayout.Label($"id={listener.ClientId}   server={cfg.server_host}:{cfg.server_port}   " +
                                 $"listening={cfg.listen_port} {(listener.IsListening ? "ok" : "FAILED")}", _label);
 
-                GUILayout.Label($"state={listener.State} {CoralOscListener.StateName(listener.State)}   " +
+                // Diagnostics show `state` — the unquantised truth — but the coral is
+                // rendered from `cue`. They differ only while quantisation holds a
+                // change back for the bar line, so surfacing the cue exactly when it
+                // lags is what distinguishes "waiting for the downbeat" from "the
+                // broadcast stopped arriving".
+                string cue = listener.Cue == listener.State
+                    ? ""
+                    : $"   cue={listener.Cue} {CoralOscListener.StateName(listener.Cue)}";
+                GUILayout.Label($"state={listener.State} {CoralOscListener.StateName(listener.State)}{cue}   " +
                                 $"intensity={listener.Intensity:F2}   T={listener.Temp:F1}C", _label);
 
                 string applied = AppliedLine();
@@ -117,6 +125,7 @@ namespace CoralPolyps
                     GUI.color = MagnifyColor();
                     GUILayout.Label(MagnifyLine(), _label);
                     GUILayout.Label(MagnifyTimersLine(), _label);
+                    GUILayout.Label(MagnifyScaleLine(), _label);
                     GUILayout.Label(RegistrationLine(), _label);
                     GUI.color = prevMag;
                 }
@@ -162,7 +171,7 @@ namespace CoralPolyps
             if (appearance == null && magnifier == null) return null;
 
             string stress = appearance != null
-                ? $"stress={appearance.Stress:F2} em={appearance.EmissionScale:F2}"
+                ? $"stress={appearance.Stress:F2} fluor={appearance.FluorPresence:F2}"
                 : "stress=-";
             string mag = magnifier != null
                 ? $"magnifier=alive {magnifier.WAlive:F2} / fluoro {magnifier.WFluorescent:F2} / " +
@@ -204,6 +213,37 @@ namespace CoralPolyps
             // which would look exactly like the sliding it exists to stop.
             $"pin {(proximity.PinnedIndex >= 0 ? $"#{proximity.PinnedIndex}" : "free")}   " +
             $"vuforia {(proximity.VuforiaTracked ? "trk" : "EXT")}";
+
+        /// <summary>
+        /// The two scales the emergence is judged on, neither of which is observable from a
+        /// plinth without printing it.
+        ///
+        /// `clip` is how many millimetres of coral the footage's width currently spans — the
+        /// footage's magnification in the one unit that can be held against the object it is
+        /// coming out of. At the start of the takeover it should read about 9.6 mm, which is
+        /// one corallite (5.8 mm in world metres) divided by the polyp's ~0.6 share of the
+        /// frame: the polyps arrive at LIFE SIZE and magnify from there. If it starts much
+        /// below that they are emerging from nothing again.
+        ///
+        /// `limit` names which of the three terms is holding the opening down, and it is the
+        /// most useful word on this line. The iris radius is a Min of the growth arc, the
+        /// silhouette leash and the screen corner, and the screen looks identical whichever
+        /// one wins — so "the footage is cutting off inside the tissue" has three different
+        /// causes that cannot be told apart by eye. `arc` is the normal answer; `leash` while
+        /// the tissue visibly extends past the video means the bound is measured too small;
+        /// `cap` means the takeover is complete. `coral` is the magnified radius the arc now
+        /// ends on.
+        /// </summary>
+        string MagnifyScaleLine()
+        {
+            var fs = proximity.fullscreen;
+            if (fs == null) return "scale: (no takeover layer)";
+
+            string leash = float.IsInfinity(fs.LeashRadius) ? "off" : $"{fs.LeashRadius:F2}";
+            return $"scale: clip {fs.FootageWorldWidthM * 1000f:F1}mm   " +
+                   $"coral {proximity.CoralWorldRadiusM * 1000f:F0}mm   " +
+                   $"leash {leash}   limit {fs.IrisLimit}";
+        }
 
         /// <summary>
         /// Registration, in degrees — the half of the pose the distance readouts cannot see.

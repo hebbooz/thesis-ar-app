@@ -1,13 +1,15 @@
 {
-  "_server_host_note": "TESTING VALUE \u2014 this Mac on the current LAN. The exhibition value is 192.168.8.10 (GL.iNet Opal reserved lease). Revert before the exhibition build.",
-  "server_host": "192.168.0.67",
+  "_server_host_note": "The exhibition value: the MacBook's reserved wired lease on the TP-Link Archer C50 coral LAN. If the Mac is on Wi-Fi instead it answers on 192.168.50.11, and while its reservation is unbound it may hold a pool address in 192.168.50.100-199 \u2014 check before assuming.",
+  "server_host": "192.168.50.10",
   "server_port": 9000,
   "listen_port": 9001,
   "client_id": "",
   "hello_interval_s": 5.0,
   "crossfade_s": 3.0,
+  "_bleach_crossfade_note": "Seconds for a full 0->1 slew on the 1->2 bleach latch only; the tissue travels fluor_point->1, so it drains to white in HALF this (13.0 -> ~6.5s). Its own rate because the projection answers the same cue with a ~20s fluorescent->bleached one-shot: the phone should arrive first, but not five times over. Everything else keeps crossfade_s.",
+  "bleach_crossfade_s": 13.0,
   "fluor_point": 0.5,
-  "suppress_emission_during_recovery": true,
+  "suppress_fluorescence_during_recovery": true,
   "_magnifier_source_options": "placeholder | grid | video",
   "magnifier_source": "video",
   "magnifier_clips": {
@@ -19,5 +21,6 @@
   "magnifier_blur_mode": "radial",
   "magnifier_blur": 1.0,
   "magnifier_blur_onset": 0.35,
-  "hud_enabled": true
+  "_hud_note": "The diagnostic overlay — a translucent black panel of text at the top-left. true for bench work, false for the exhibition. It can also be toggled live with a three-finger tap, but only while this is true.",
+  "hud_enabled": false
 }
