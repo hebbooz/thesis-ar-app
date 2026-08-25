@@ -145,9 +145,9 @@ namespace CoralPolyps
         // `coral-rendering`, re-run the align tool and replace these three lines.
         // The rotation is not a clean 90° multiple and is not meant to be — it is the
         // product of two independent baked orientations.
-        static readonly Vector3 AlignPosition = new Vector3(-0.1212f, 0.1312f, 0.0431f);
-        static readonly Vector3 AlignRotation = new Vector3(304.5564f, 247.5180f, 259.5213f);
-        static readonly Vector3 AlignScale    = new Vector3(1.37f, 1.37f, 1.37f);
+        static readonly Vector3 AlignPosition = new Vector3(-0.0395f, -0.0061f, 0.0077f);
+        static readonly Vector3 AlignRotation = new Vector3(35.3160f, 98.7753f, 41.1563f);
+        static readonly Vector3 AlignScale    = new Vector3(1.14f, 1.14f, 1.14f);
 
         static void ApplyMeasuredAlignment(Transform coral)
         {

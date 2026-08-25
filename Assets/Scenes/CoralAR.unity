@@ -300,15 +300,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 522159032}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: 0.15116197, y: 0.94581074, z: -0.045355573, w: 0.283787}
+  m_LocalPosition: {x: -0.30347204, y: 0.047837622, z: 0.03414679}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6334997532680977106}
   - {fileID: 831997946}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 9.88, y: 147.928, z: 15.314}
 --- !u!114 &522159034
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -368,29 +368,29 @@ MonoBehaviour:
   PreviewVisible: 1
   RuntimeOcclusion: 0
   RuntimeCollider: 0
-  mTrackableName: coral-rendering
+  mTrackableName: coral-rendering-24-aug
   mInitializedInEditor: 1
-  mDataSetPath: Vuforia/coral-rendering.xml
-  mBaseSize: 0.1329208
-  mAspectRatioXY: 1.0429579
-  mAspectRatioXZ: 0.82844824
+  mDataSetPath: Vuforia/coral-rendering-24-aug.xml
+  mBaseSize: 0.089031704
+  mAspectRatioXY: 1.6373179
+  mAspectRatioXZ: 1.5571026
   mShowBoundingBox: 0
   mOverrideSnappingPose: 0
-  mBBoxMin: {x: -0.194461, y: 0.0586842, z: 0}
-  mBBoxMax: {x: -0.0615402, y: 0.197315, z: 0.110118}
-  mPreviewImage: {fileID: 2800000, guid: 08def7615e6147218f4163df3e64c783, type: 3}
+  mBBoxMin: {x: -0.130629, y: 0.0991208, z: -0.0142565}
+  mBBoxMax: {x: -0.0415973, y: 0.244894, z: 0.124375}
+  mPreviewImage: {fileID: 0}
   mEnhanceRuntimeDetection: 0
   m3DGuideViewModel: {fileID: 0}
   m2DGuideViewImage: {fileID: 0}
   mGuideViewDisplayMode: 0
   m2DGuideViewMaterial: {fileID: 0}
   m3DGuideViewMaterial: {fileID: 0}
-  mLength: 0.1329208
-  mWidth: 0.1386308
-  mHeight: 0.110118
+  mLength: 0.089031704
+  mWidth: 0.1457732
+  mHeight: 0.1386315
   m2DGuideViewMaterials: []
   m3DGuideViewMaterials: []
-  mSelectedGuideView: GuideView_0000
+  mSelectedGuideView: 
   mMotionHint: 1
   mTrackingMode: 1
   mTrackingOptimization: 0
@@ -413,8 +413,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Vuforia.Unity.Engine.dll::Vuforia.ModelTargetPreview
   mObserverBehaviour: {fileID: 522159035}
   mHiddenRoot: {fileID: 0}
-  mTargetName: coral-rendering
-  mDatasetName: Vuforia/coral-rendering.xml
+  mTargetName: coral-rendering-24-aug
+  mDatasetName: Vuforia/coral-rendering-24-aug.xml
   mCastedBehaviour: {fileID: 522159035}
   mModelTargetPreview: {fileID: 0}
 --- !u!21 &584428141
@@ -1258,14 +1258,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2390415235056916657}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.021778563, y: 0.0048041753, z: -0.02399486, w: 0.9994633}
-  m_LocalPosition: {x: 0.0056, y: 0.0139, z: 0.0016}
+  m_LocalRotation: {x: 0.43910432, y: 0.60780734, z: 0.002437174, w: 0.6616282}
+  m_LocalPosition: {x: -0.0395, y: -0.0061, z: 0.0077}
   m_LocalScale: {x: 1.14, y: 1.14, z: 1.14}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 1274010845}
   m_Father: {fileID: 6334997532680977106}
-  m_LocalEulerAnglesHint: {x: 2.508, y: 0.491, z: -2.74}
+  m_LocalEulerAnglesHint: {x: 35.316, y: 98.775, z: 41.156}
 --- !u!33 &8596656868548670144
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -1290,6 +1290,10 @@ MonoBehaviour:
   cam: {fileID: 715359630}
   coralRoot: {fileID: 0}
   coralCollider: {fileID: 8596656868548670146}
+  corallites: {fileID: 11400000, guid: 43ec425a57ce6496b8f921507f1cce29, type: 2}
+  pinToCorallite: 1
+  repickViewportMargin: 0.42
+  repickMaxReveal: 0.25
   fullscreen: {fileID: 0}
   magnifyStartDistance: 0.12
   magnifyFullDistance: 0.05
@@ -1376,13 +1380,15 @@ MonoBehaviour:
     m_RotationOrder: 4
   implausibleFarM: 3
   implausibleJumpM: 0.15
+  enableSpinGate: 0
+  implausibleSpinDegPerS: 60
+  enableFlipGate: 1
+  printUpInTargetSpace: {x: 0, y: 1, z: 0}
+  implausibleTiltDeg: 60
+  flipHoldMaxS: 2
   takeoverHoldMaxS: 8
   takeoverReleaseS: 1
   reacquireReconcileS: 0.25
-  corallites: {fileID: 11400000, guid: 43ec425a57ce6496b8f921507f1cce29, type: 2}
-  pinToCorallite: 1
-  repickViewportMargin: 0.42
-  repickMaxReveal: 0.25
   measureFromSurface: 1
   euroMinCutoff: 1
   euroBeta: 1.5

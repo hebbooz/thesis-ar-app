@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<QCARConfig>
+    <Tracking>
+        <ModelTarget name="coral-rendering-24-aug" trackingMode="car" motionHint="adaptive" upVector="1.0 0.0 0.0" optimizeTrackingFor="default"></ModelTarget>
+    </Tracking>
+    <Assembly name="coral-rendering-24-aug" assemblyId="3bb621d70562485bb79c72249ec89291">
+        <Part name="coral-rendering-24-aug" translation="0 0 0" rotation="AD: 0 0 1 0"></Part>
+        <EntryPoint name="(none)" trained="yes"></EntryPoint>
+    </Assembly>
+</QCARConfig>
