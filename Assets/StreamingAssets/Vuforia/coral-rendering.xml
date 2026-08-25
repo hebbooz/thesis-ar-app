@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <QCARConfig>
 <Tracking>
-<ModelTarget name="coral-rendering" motionHint="adaptive" trackingMode="car" optimizeTrackingFor="default"/>
+<ModelTarget name="coral-rendering" motionHint="static" trackingMode="default" optimizeTrackingFor="low_features"/>
 
 </Tracking>
 

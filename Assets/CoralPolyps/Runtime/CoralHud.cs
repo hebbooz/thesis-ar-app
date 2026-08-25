@@ -127,6 +127,7 @@ namespace CoralPolyps
                     GUILayout.Label(MagnifyTimersLine(), _label);
                     GUILayout.Label(MagnifyScaleLine(), _label);
                     GUILayout.Label(RegistrationLine(), _label);
+                    GUILayout.Label(UprightLine(), _label);
                     GUI.color = prevMag;
                 }
 
@@ -273,13 +274,35 @@ namespace CoralPolyps
             $"{(proximity.LastSpinPlausible ? "ok" : "REJECTED")}   rej {proximity.SpinRejections}";
 
         /// <summary>
+        /// Which way is up, in degrees — the OTHER half of the rotation, and the only half with
+        /// an outside witness. `up` is the angle between the print's up axis as solved and world
+        /// up. The print is bolted upright, so this is ground truth rather than a comparison
+        /// against another solve, which is why it reads so much more plainly than `rot:`.
+        ///
+        ///   * up near 0, rej not moving — honest tracking. The working state.
+        ///   * up near 180 with rej climbing — the tracker is flipping the coral and the gate is
+        ///     catching it. Expected on this target: the scan's footprint is a circle and its top
+        ///     and bottom caps differ by 4%, so upside down and right way up score alike.
+        ///   * up near 180 CONSTANTLY while the coral looks correct on screen — printUpInTargetSpace
+        ///     is wrong, not the tracker. Negate it. The gate releases itself after flipHoldMaxS
+        ///     and logs a warning when this happens, so it cannot wreck registration meanwhile.
+        ///   * up near 90 — printUpInTargetSpace names the wrong axis entirely.
+        ///
+        /// See MAGNIFIER.md §3d.
+        /// </summary>
+        string UprightLine() =>
+            $"up: {proximity.SolveTiltDeg:F0}deg   " +
+            $"{(proximity.LastTiltPlausible ? "ok" : "FLIPPED")}   rej {proximity.FlipRejections}";
+
+        /// <summary>
         /// White at meso, green through the blend, blue at full micro — and amber the moment
         /// the pose is distrusted or the input is held, so a recording shows exactly when the
         /// picture stopped being live.
         /// </summary>
         Color MagnifyColor()
         {
-            if (proximity.TakeoverHeld || !proximity.LastPosePlausible || !proximity.LastSpinPlausible)
+            if (proximity.TakeoverHeld || !proximity.LastPosePlausible ||
+                !proximity.LastSpinPlausible || !proximity.LastTiltPlausible)
                 return new Color(1f, 0.8f, 0.3f);
             switch (proximity.State)
             {

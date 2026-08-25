@@ -293,6 +293,57 @@ namespace CoralPolyps
                  "was far too tight; expect the real value to be several hundred.")]
         public float implausibleSpinDegPerS = 60f;
 
+        // THE OTHER HALF OF THE ROTATION FAULT — AND THE ONLY HALF WITH GROUND TRUTH.
+        //
+        // The spin gate above judges a solve against the PREVIOUS solve, which is why it is so
+        // hard to tune: both populations are "a few degrees", and the threshold has to thread
+        // between honest jitter and real error with no margin. That is the whole story of §3c.
+        //
+        // The upside-down flip is a different animal. Measure the mesh and the reason is plain:
+        // the scan's footprint is 97.9 x 101.8 mm (aspect 0.961 — a circle) and its top cap and
+        // bottom cap have almost the same radius, 29.8 mm against 28.5 mm. Turning this coral
+        // over changes its silhouette by about four percent, which is inside the tracker's noise,
+        // so "right way up" and "upside down" score the same and the winner is arbitrary. No
+        // amount of filtering invents the missing information.
+        //
+        // But this fault, unlike yaw, has an external witness: GRAVITY. The print is bolted
+        // upright in the water bath and never moves, Vuforia's world centre mode is DEVICE, and
+        // the device knows which way is down. So the print's up axis MUST come out pointing at
+        // world up. Honest tracking reports a tilt of a few degrees; a flipped solve reports
+        // about 180. Two populations 180 degrees apart — any threshold in the middle separates
+        // them with ~60 degrees of margin on both sides, which is exactly what the spin gate
+        // never had. This one can be tuned by reasoning; that one could not.
+        //
+        // FAIL-SOFT, BECAUSE ONE THING HERE IS A CONVENTION AND NOT A MEASUREMENT.
+        // `printUpInTargetSpace` is which axis of the Model Target's own frame points skyward on
+        // the real print. Vuforia converts the MTG's Z-up authoring space to Unity's Y-up, so
+        // +Y is the documented answer and the default — but if it is wrong, this gate would
+        // refuse every honest solve, which is precisely how the spin gate wrecked registration.
+        // So it CANNOT latch: `flipHoldMaxS` caps how long a flip may hold the mesh, and past
+        // the cap the gate gives up and lets the solve through. A wrong axis therefore costs a
+        // two-second freeze and a loud log line, not a coral pinned to a pose from last minute.
+        // Watch the HUD's `up:` reading: near 0 in normal use means the axis is right.
+        [Tooltip("Reject solves that stand the coral on its head. Safe to leave on: it judges " +
+                 "against gravity rather than against the previous solve, so the two cases are " +
+                 "180 degrees apart, and it releases after flipHoldMaxS rather than latching.")]
+        public bool enableFlipGate = true;
+
+        [Tooltip("Which axis of the MODEL TARGET's local frame points skyward on the real print. " +
+                 "Vuforia maps the MTG's Z-up authoring space onto Unity's Y-up, so +Y is the " +
+                 "expected answer. If the HUD's `up:` reading sits near 180 during normal, " +
+                 "visibly-correct tracking, this is the field that is wrong — not the tracker.")]
+        public Vector3 printUpInTargetSpace = Vector3.up;
+
+        [Tooltip("Largest believable tilt of the print's up axis away from world up, in degrees. " +
+                 "Honest tracking reads a few degrees; a flip reads ~180. Anywhere in the middle " +
+                 "works — this is the one threshold in this file that does not need measuring.")]
+        public float implausibleTiltDeg = 60f;
+
+        [Tooltip("Longest a flipped solve may hold the mesh before the gate gives up and accepts " +
+                 "it anyway, in seconds. The escape hatch: distrust must never become permanent " +
+                 "(§3c). Raise it once `up:` has confirmed printUpInTargetSpace is right.")]
+        public float flipHoldMaxS = 2.0f;
+
         [Header("Holding the input (never the output)")]
         [Tooltip("How long to hold `d` at its last measured value once the target is lost, " +
                  "before releasing. Vuforia drops a ~10 cm Model Target around 5 cm, which is " +
@@ -450,6 +501,17 @@ namespace CoralPolyps
         /// circuit of the coral and watch this against whether the mesh visibly twists.</summary>
         public int SpinRejections { get; private set; }
 
+        /// <summary>Angle between the print's up axis as solved and world up, in degrees. Near 0
+        /// when tracking is honest, near 180 when the solve has the coral upside down. Reads 0
+        /// when there is no observer (editor rigs).</summary>
+        public float SolveTiltDeg { get; private set; }
+
+        /// <summary>Did this frame's solve stand the coral the right way up?</summary>
+        public bool LastTiltPlausible { get; private set; } = true;
+
+        /// <summary>How many solves have been rejected as upside down.</summary>
+        public int FlipRejections { get; private set; }
+
         /// <summary>True when Vuforia reports genuinely TRACKED (not EXTENDED_TRACKED, which is
         /// dead reckoning — the mesh can sit centimetres off the print under it). Defaults true
         /// when no observer is found, so editor Play mode and manual rigs behave.</summary>
@@ -500,6 +562,22 @@ namespace CoralPolyps
         private Quaternion _lastGoodRot = Quaternion.identity;
         private float _lastGoodRotAgeS;
         private bool _haveLastGoodRot;
+
+        // How long the flip gate has been continuously refusing, so it can let go (see
+        // flipHoldMaxS). Reset by any accepted solve and by target loss.
+        private float _flipHeldFor;
+
+        // The magnification's fixed point, as it stood on the last LIVE frame. While the mesh
+        // is frozen this is reused instead of being re-derived from the camera — see §3c bug 2
+        // and the magnification block below.
+        private Vector3 _lastAnchor;
+        private bool _haveLastAnchor;
+
+        /// <summary>True on a frame whose mesh pose was RESTORED rather than taken from the
+        /// tracker. The magnification block reads this: its fixed point has to be a point on
+        /// the geometry actually being drawn, and while frozen that is not where a live
+        /// raycast says it is.</summary>
+        private bool _poseHeld;
 
         // The transform the scatter map's local space belongs to — the mesh's own, which is
         // not necessarily coralRoot (SceneBuilder puts the renderer on a child). Resolved
@@ -768,9 +846,17 @@ namespace CoralPolyps
             // ROTATION holds the mesh. The visitor's hand keeps driving the picture either way.
             bool spinPlausible = IsPlausibleSpin(targetVisible, dt);
 
+            // The half of the rotation that gravity can adjudicate. Same principle as the spin
+            // gate — a bad rotation holds the MESH and never `d` — but this one is judged
+            // against world up rather than against the last solve, so it is decided rather than
+            // tuned. See the block by enableFlipGate.
+            bool tiltPlausible = IsPlausibleTilt(targetVisible, dt);
+
+            _poseHeld = false;
+
             if (_haveBase && targetVisible)
             {
-                if (VuforiaTracked && believable && spinPlausible)
+                if (VuforiaTracked && believable && spinPlausible && tiltPlausible)
                 {
                     _confidentPos = _root.position;
                     _confidentRot = _root.rotation;
@@ -784,10 +870,13 @@ namespace CoralPolyps
                         _lastGoodRotAgeS = 0f;
                         _haveLastGoodRot = true;
                     }
+
+                    _flipHeldFor = 0f;
                 }
                 else if (_haveConfidentPose)
                 {
                     _root.SetPositionAndRotation(_confidentPos, _confidentRot);
+                    _poseHeld = true;
                 }
             }
             else
@@ -800,6 +889,13 @@ namespace CoralPolyps
                 SolveDriftDeg = 0f;
                 SolveSpinDegPerS = 0f;
                 LastSpinPlausible = true;
+
+                // Same reasoning for the flip budget: re-acquiring after a gap must not be
+                // judged against a hold that started before it.
+                _flipHeldFor = 0f;
+                SolveTiltDeg = 0f;
+                LastTiltPlausible = true;
+                _haveLastAnchor = false;
             }
 
             // ------------------------------------------------------------- 4. THE ARCS
@@ -875,8 +971,28 @@ namespace CoralPolyps
                 //     at the point of attention; the only anchor that is not camera-relative.
                 //   FrontSurface    — the near face, so inspected cups hold their focal spot.
                 //   CoralCenter     — grows about the middle; the near face bulges forward.
+                // §3c BUG 2, FIXED HERE. The fixed point of the scaling has to be a point on
+                // the geometry that is actually being drawn. Every branch below derives it from
+                // a LIVE camera raycast against the coral's CURRENT bounds — which is correct
+                // while the mesh is tracking, and wrong the moment §3 freezes it, because the
+                // raycast then reports where the coral WOULD be rather than where it is. The
+                // scale-up and the displacement stop cancelling, and at k = 2.5 the coral is
+                // shoved 1.5x along a meaningless vector: it lands anywhere, including far
+                // behind the print, where a 2.5x mesh still reads as far too small. That fires
+                // on every EXTENDED_TRACKED dropout today, not only when a gate refuses a solve.
+                //
+                // So while the pose is held, hold the anchor with it. `k` deliberately stays
+                // LIVE — it comes from `d`, the distance measurement is still good (a bad
+                // rotation tells us nothing about how far away the hand is), and with both P
+                // and the anchor now constant the coral goes on swelling smoothly about a fixed
+                // point on the frozen geometry. Freezing k as well would stall the swell and
+                // pop on recovery; freezing the anchor is the whole fix.
                 Vector3 anchor = center;
-                if (magnifyAnchor == MagnifyAnchor.PinnedCorallite && PinnedIndex >= 0)
+                if (_poseHeld && _haveLastAnchor)
+                {
+                    anchor = _lastAnchor;
+                }
+                else if (magnifyAnchor == MagnifyAnchor.PinnedCorallite && PinnedIndex >= 0)
                 {
                     anchor = LoupeCenter;                          // resolved just above
                 }
@@ -893,6 +1009,12 @@ namespace CoralPolyps
                         float extAlong = Mathf.Abs(toCam.x) * e.x + Mathf.Abs(toCam.y) * e.y + Mathf.Abs(toCam.z) * e.z;
                         anchor = center + toCam * extAlong;        // front surface toward the camera
                     }
+                }
+
+                if (!_poseHeld)
+                {
+                    _lastAnchor = anchor;                          // the last LIVE fixed point
+                    _haveLastAnchor = true;
                 }
 
                 Vector3 P = _root.position;                        // base pivot (world), post-reset
@@ -912,7 +1034,16 @@ namespace CoralPolyps
             //
             // forceRenderingOff rather than .enabled, because the visibility test above reads
             // .enabled and would mistake our own hiding for Vuforia's.
-            SetCoralHidden(ScreenIsCovered);
+            //
+            // ...and one other case: the gate below §3 has judged this solve upside down and
+            // there is no confident pose to fall back on, which is the cold-start hole — the
+            // FIRST solve of a session being flipped. §3 can only hold a pose it has already
+            // taken, so with nothing captured yet the mesh sits at the inverted solve and the
+            // gate would have no effect at all. Showing nothing is the honest answer: we know
+            // the pose is wrong and we have nothing better to draw. It lasts until one
+            // right-way-up solve lands, which is a frame or two.
+            bool flipWithNoFallback = !tiltPlausible && !_haveConfidentPose;
+            SetCoralHidden(ScreenIsCovered || flipWithNoFallback);
 
             UpdateLabel(dt, d);
         }
@@ -1105,6 +1236,86 @@ namespace CoralPolyps
 
             LastSpinPlausible = ok;
             return ok;
+        }
+
+        /// <summary>
+        /// Reject a solve that has the coral standing on its head.
+        ///
+        /// The print is bolted upright in the bath and Vuforia's world centre mode is DEVICE, so
+        /// the print's up axis has to come out of a correct solve pointing at world up. This is
+        /// the one rotational test in this file with an external witness — gravity — rather than
+        /// a previous solve, and it is why the threshold can be reasoned about instead of
+        /// measured: honest tracking reads a few degrees, a flip reads about 180, and 60 sits
+        /// in the middle with enormous margin on both sides.
+        ///
+        /// It exists because the geometry cannot supply the answer. The scan's footprint is
+        /// 97.9 x 101.8 mm (a circle) and its top and bottom caps differ in radius by 4%, so the
+        /// silhouette barely changes when the coral is turned over and the tracker's two
+        /// hypotheses score alike. Vuforia is not malfunctioning; it is being asked a question
+        /// the camera cannot answer, and this supplies the missing constraint from outside.
+        ///
+        /// CANNOT LATCH. `printUpInTargetSpace` is a convention, not a measurement, and if it is
+        /// wrong this would refuse every honest solve — the spin gate's exact failure. So the
+        /// hold is capped: past `flipHoldMaxS` the gate gives up, logs, and accepts. Worst case
+        /// is a brief freeze and a log line pointing at the field to fix.
+        /// </summary>
+        private bool IsPlausibleTilt(bool targetVisible, float dt)
+        {
+            // No observer means no Vuforia (editor play mode, ProximityTestRig): there is no
+            // solve to distrust, and gating on one would freeze the rig.
+            if (_observer == null || useManualDistance || !targetVisible || !VuforiaTracked)
+            {
+                SolveTiltDeg = 0f;
+                LastTiltPlausible = true;
+                return true;
+            }
+
+            // Where the print's up axis has ended up, in the world, according to this solve.
+            Vector3 up = printUpInTargetSpace.sqrMagnitude > 1e-8f
+                ? printUpInTargetSpace.normalized
+                : Vector3.up;
+            Vector3 solvedUp = _observer.transform.TransformDirection(up);
+
+            SolveTiltDeg = Vector3.Angle(solvedUp, Vector3.up);
+
+            // MEASURE ALWAYS, REJECT ONLY WHEN ASKED — same contract as the spin gate, so the
+            // HUD's `up:` reading means the same thing whether the gate is live or not.
+            if (!enableFlipGate)
+            {
+                LastTiltPlausible = true;
+                return true;
+            }
+
+            bool ok = SolveTiltDeg <= implausibleTiltDeg;
+
+            if (ok)
+            {
+                _flipHeldFor = 0f;
+                LastTiltPlausible = true;
+                return true;
+            }
+
+            // THE ESCAPE HATCH. Distrust must never become permanent.
+            _flipHeldFor += dt;
+            if (_flipHeldFor > flipHoldMaxS)
+            {
+                if (logStateChanges && LastTiltPlausible)
+                    Debug.LogWarning($"[magnify] the solve has read {SolveTiltDeg:F0}deg from vertical for " +
+                                     $"{_flipHeldFor:F1}s — longer than flipHoldMaxS, so the flip gate is " +
+                                     $"letting it through. If the coral looks CORRECT on screen while this " +
+                                     $"fires, printUpInTargetSpace is wrong, not the tracker.");
+                LastTiltPlausible = true;
+                return true;
+            }
+
+            FlipRejections++;
+            // Log the ONSET only: a flip lasting many frames is one event.
+            if (logStateChanges && LastTiltPlausible)
+                Debug.Log($"[magnify] solve stands the coral {SolveTiltDeg:F0}deg from vertical — " +
+                          $"holding the mesh's rotation. rejection #{FlipRejections}");
+
+            LastTiltPlausible = false;
+            return false;
         }
 
         private void SetCoralHidden(bool hidden)

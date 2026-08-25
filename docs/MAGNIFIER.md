@@ -526,7 +526,17 @@ refused most of it.
    and the displacement stop cancelling. The coral lands anywhere — including far behind the
    print, where a 2.5× mesh still reads as far too small. *This one is a pre-existing bug that
    the gate merely exposed:* it fires on any frozen pose, including every `EXTENDED_TRACKED`
-   dropout today, and is a live suspect for part of the original complaint. Not yet fixed.
+   dropout today, and is a live suspect for part of the original complaint.
+
+   **FIXED.** The fault was never the freeze; it was that the scaling's fixed point kept being
+   re-derived from a live camera raycast against geometry that had stopped moving, so the
+   scale-up and the displacement stopped cancelling. The anchor is now held with the pose
+   (`_lastAnchor`, restored whenever `_poseHeld`). `k` deliberately stays **live** — it comes
+   from `d`, and `d` is still a good measurement — so with both the pivot and the anchor
+   constant the coral goes on swelling smoothly about a fixed point on the frozen geometry
+   instead of being flung along a meaningless vector. Freezing `k` too would stall the swell
+   and pop on recovery. This was a prerequisite for §3d: a gate that answers a bad solve by
+   freezing the mesh is only safe once freezing the mesh is safe.
 
 **The order was wrong.** The gate is a fix whose target was never measured. `enableSpinGate` is
 now `false`; the `rot:` readout runs regardless and costs nothing. Watch `spin` on device, see
@@ -564,6 +574,75 @@ index. Yaw off ⇒ the polyps emerge from a cup that is not physically there, wh
 yaw information the geometry does not contain. If from some viewpoint the wrong yaw
 *consistently* wins the solve, this buys a stable wrong answer instead of an unstable one —
 see §8 for how to tell, and what to do about it.
+
+---
+
+## 3d. Upside down — the half of the rotation that gravity can settle
+
+**The symptom.** Intermittently the coral is rendered inverted: the smooth underside of the
+virtual mesh faces the ceiling while the print underneath it plainly does not.
+
+**Why the tracker cannot tell.** §3c blamed yaw on a near-square footprint and repeated
+corallites, and understated the case. Measure the scan and the ambiguity is worse than that:
+
+| | |
+|---|---|
+| footprint | 97.9 × 101.8 mm — **aspect 0.961**, a circle |
+| height (short axis) | 59.2 mm |
+| top cap radius | 29.8 mm |
+| bottom cap radius | 28.5 mm |
+
+The silhouette is a circle from every direction, and the top and bottom caps differ in radius
+by **four percent**. Turn this object over and its outline barely changes. A Model Target solves
+pose from silhouette and edge geometry, so *two* of the three rotational degrees of freedom are
+ill-conditioned here, not one: yaw about the dome axis, and the 180° flip about any horizontal
+axis. Both hypotheses score within noise, and the winner is arbitrary.
+
+The generated guide views say the same thing out loud. Of the seven entry points, **0003, 0005
+and 0006 render the smooth underside** — a face the visitor can never occupy, because the print
+sits in a water bath — and they present the same circular outline as the corallite face. All
+seven are `trained="no"`, so recognition leans on guide-view alignment, and a circle matches a
+circle.
+
+**Vuforia is not malfunctioning. It is being asked a question the camera cannot answer.**
+
+**Why this one is fixable and yaw is not.** The flip has an external witness that yaw does not:
+**gravity**. The print is bolted upright in the bath, it never moves, and Vuforia's world centre
+mode is `DEVICE` — so the print's up axis must come out of a correct solve pointing at world up.
+Nothing about the coral's appearance supplies that; the device's own attitude does.
+
+That difference is what makes the threshold decidable rather than measurable, and it is the
+precise reason this gate ships **on** while §3c's ships off:
+
+| | spin gate (§3c) | flip gate (§3d) |
+|---|---|---|
+| reference | the previous solve | world up |
+| honest tracking reads | a few degrees | a few degrees |
+| the fault reads | a few degrees | ~180 degrees |
+| margin at threshold | none — hence the disaster | ~60° either side |
+| how the threshold was chosen | guessed, wrongly | falls out of the geometry |
+
+`implausibleTiltDeg` is 60. Anything from about 30 to about 150 behaves identically.
+
+**The one thing in it that is a convention, not a measurement.** `printUpInTargetSpace` names
+which axis of the Model Target's local frame points skyward on the real print. Vuforia maps the
+MTG's Z-up authoring space (`upVector="0 0 1"` in `authoringinfo.xml`) onto Unity's Y-up, so
+`+Y` is the documented answer and the default — but it has not been confirmed on device, and if
+it is wrong the gate would refuse *every honest solve*, which is exactly how §3c's gate wrecked
+registration.
+
+So **it cannot latch.** `flipHoldMaxS` (2 s) caps how long a flip may hold the mesh; past the cap
+the gate gives up, accepts the solve, and logs a warning naming the field to fix. A wrong axis
+convention therefore costs a two-second freeze and a log line — it degrades to today's behaviour,
+not to §3c's. Read `up:` on the HUD: near 0 in normal use means the axis is right, and
+`flipHoldMaxS` can then be raised.
+
+**Same division of labour as §3c:** a bad rotation holds the **mesh**, never `d`. A flip tells us
+nothing about how far away the visitor's hand is, so the reveal keeps running.
+
+**What it does not do.** It rejects inverted poses; it cannot invent the correct yaw, and it
+cannot stop the flips happening. The causes are upstream, in §8 — `motionHint`, the untrained
+database, the underside guide views, and ultimately the symmetry of the object itself.
 
 ---
 
@@ -775,27 +854,93 @@ the field is still empty.
 None of these are code, and all of them are upstream of the gate, which only ever chooses
 among the poses Vuforia hands it. Worth doing in this order once §3c has been judged:
 
-- **`motionHint` is `adaptive` and should almost certainly be `static`.** `coral-rendering.xml`
-  says `motionHint="adaptive"`, i.e. "expect this object to be picked up and moved" — so
-  Vuforia re-solves pose every frame, which is the door the yaw flips walk through. The coral
-  is fixed in a water bath. Vuforia's guidance is that STATIC suits immobile objects and lets
-  the tracker lean on the device pose instead of re-solving; the cost, that moving the object
-  breaks tracking until re-detection, does not apply here. One field in the Model Target
-  Generator, and the highest-leverage non-code change available.
-- **`trackingMode="car"`** on a 13 cm coral. Unverified — a vehicle tracking mode on this
-  object deserves one look in the MTG before anything else is tuned.
-- **The database is untrained.** All 7 entry points in the XML say `trained="no"`, so this is
-  a standard Model Target leaning on guide-view alignment for recognition. A persistent yaw
-  error usually descends from a bad *initial* solve; an Advanced (trained) database gives
-  view-independent recognition.
-- **`mTrackingOptimization` is DEFAULT and `mHasRealisticTextures` is 0** — a white untextured
-  print is a low-feature object by definition, so `LOW_FEATURE_OBJECTS` is worth a test.
-  Likewise `mEnhanceRuntimeDetection` (currently 0). Both reversible one-field changes.
-- **Break the symmetry physically.** The only fix that addresses the cause rather than the
-  symptom: one rigid asymmetric landmark in the Model Target CAD — an asymmetric base collar
-  under the print, a notch, one distinctly-shaped lobe. A dome with a single yaw landmark
-  collapses the ambiguity outright. Reach for this only if the `rot:` line says the wrong yaw
-  is winning *consistently* rather than intermittently.
+**DONE — `coral-rendering.xml`, three attributes.** Edited in place; the runtime reads them
+from the XML, but the Model Target Generator is the canonical source and should be re-exported
+to match before the next database rebuild, or the next export silently reverts all three.
+
+```
+- motionHint="adaptive" trackingMode="car"     optimizeTrackingFor="default"
++ motionHint="static"   trackingMode="default" optimizeTrackingFor="low_features"
+```
+
+- **`motionHint`: `adaptive` → `static`.** `adaptive` means "expect this object to be picked up
+  and moved", so Vuforia re-solves pose every frame — the door both the yaw flips and the §3d
+  inversions walk through. The coral is bolted into a water bath. STATIC suits immobile objects
+  and lets the tracker lean on the device pose instead of re-solving; the cost, that moving the
+  object breaks tracking until re-detection, does not apply here. The highest-leverage non-code
+  change available.
+- **`trackingMode`: `car` → `default`.** A vehicle tracking mode was set on a 13 cm coral.
+- **`optimizeTrackingFor`: `default` → `low_features`.** A white untextured print is a
+  low-feature object by definition.
+
+**THE ROOM CONSTRAINT THAT DECIDES THE REST.** The plinth stands free and **visitors can walk
+a full circle around it** (confirmed 2026-08-24). That fixes what is and is not available:
+
+- **Elevation and roll can be narrowed, and should be.** Nobody views a bath from underneath,
+  and phones are held upright. Narrowing these removes the §3d inversion from the hypothesis set
+  outright rather than gating it out afterwards.
+- **Azimuth must stay 360°.** Which means the yaw ambiguity of §3c cannot be narrowed away. It is
+  a property of the object, the recognition range cannot exclude it, and no filter recovers it —
+  so **breaking the symmetry physically is the only remaining fix for yaw**, and it moves from
+  "reach for this if" to the one thing that will actually settle it.
+
+**STILL OUTSTANDING — these need the Model Target Generator and cannot be done from the repo.**
+
+- **Narrow elevation and roll, and retrain. The highest-value move now available, and it is
+  free.** Suggested spans: elevation **+10° to +90°** — take it all the way to vertical, because
+  the loupe interaction has visitors leaning directly over the coral and clipping the top of the
+  range would drop tracking exactly when they lean in — and roll **±45°**. Leave generous margins
+  on both: detection fails outside a recognition range rather than degrading. Narrowing also
+  *improves* an Advanced database rather than merely shrinking it, because the training budget is
+  spread over fewer views, so each is better represented.
+- **The database is untrained, and three of its guide views are useless.** All 7 entry points
+  say `trained="no"`, so this is a standard Model Target leaning on guide-view alignment for
+  recognition. Worse, **guide views 0003, 0005 and 0006 render the smooth underside** — a face
+  the visitor can never see, because the print sits in a bath — and they offer the same circular
+  outline as the corallite face, so they are live invitations to the §3d inversion. Regenerate
+  with entry points confined to the elevations a standing visitor actually occupies, and train
+  the database (Advanced Model Target) for view-independent recognition.
+- **`mHasRealisticTextures` is 0 and `mEnhanceRuntimeDetection` is 0.** Both reversible
+  one-field changes worth a test alongside the retrain.
+- **Break the symmetry physically — and note this now fixes TWO faults, not one.** §3d measured
+  the object: footprint aspect 0.961 and top/bottom cap radii within 4% of each other. The
+  silhouette is a circle from every direction and nearly the same circle either way up, so both
+  the yaw ambiguity and the inversion descend from the same cause. One rigid asymmetric landmark
+  in the Model Target CAD — an asymmetric base collar under the print, a notch, one distinctly
+  shaped lobe — collapses both at once. **A collar under the print is the strongest single move
+  available:** it is visible from every viewing angle, it breaks yaw and up/down together, and
+  it costs one reprint of a part that is not the coral. This is the only fix that addresses the
+  cause rather than the symptom, and §3d's measurements argue for doing it rather than waiting.
+
+**⚠️ UNRESOLVED AND LOAD-BEARING — the three meshes do not agree (found 2026-08-24)**
+
+Measured from the files, not inferred:
+
+| | footprint | height | h:w |
+|---|---|---|---|
+| scan `astraea_favistella` — Unity's virtual coral | 97.9 × 101.8 mm | 59.2 mm | 0.59 |
+| `bambu-projects/coral-1.3mf` build item (scan × uniform 1.5) | 146.8 × 152.7 mm | 88.7 mm | 0.59 |
+| both MTG projects (`coral-rendering.stl`, `coral.fbx`) | 132.9 × 138.6 mm | 110.1 mm | **0.81** |
+
+The 3MF's transform is a clean uniform 1.5 (all three basis rows measure exactly 1.5000). The MTG
+geometry is **not** a uniform scaling of the scan: footprint ×1.36, height ×1.86 — an extra ~1.37
+stretch on the up axis alone. So the Model Target describes a coral ~37% taller relative to its
+width than the scan everything else descends from, and `SceneBuilder.AlignScale` is uniform 1.37,
+which cannot match a non-uniformly stretched print at any value.
+
+A Model Target solves pose from silhouette and edges. Given a shape the real object does not have,
+it detects poorly and settles on a compromise pose — which is indistinguishable, on screen, from
+the tracking faults of §3c and §3d. **Fix this before tuning anything else in §3c/§3d**: those are
+about choosing among poses, and this is about the poses all being wrong.
+
+Which mesh is the physical truth cannot be settled from the files. Measure the print:
+- **≈147 × 153 mm wide, ≈89 mm tall** → the Model Target is wrong; regenerate from the scan at
+  uniform 1.5.
+- **≈133 × 139 mm wide, ≈110 mm tall** → the target is right and the Unity coral is wrong; the
+  virtual mesh needs the same non-uniform stretch, or the print needs redoing from the scan.
+
+The STL (18 Apr) postdates the 3MF (15 Apr), which mildly favours the second — inference, not
+evidence.
 
 **Known-incomplete**
 
