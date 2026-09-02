@@ -12,7 +12,7 @@
   "suppress_fluorescence_during_recovery": true,
   "_magnifier_source_options": "placeholder | grid | video",
   "magnifier_source": "video",
-  "_magnifier_clips_note": "TRIAL BRANCH: the anya-* set. One Faviid corallite shot three ways in the SAME framing, so a crossfade transforms the polyp in place instead of cutting between three different corals. 'transparent-favia-loop' is the source name of the fluorescent clip — it is green GFP glow, not a transparency; it feeds the fluorescent slot on look, not on filename. The *-microscale.mp4 set from development is still beside these: swap the three names back to A/B them in the Editor. Landscape 16:9, unlike the portrait set — see docs/FOOTAGE_TRIAL.md before judging the takeover crop or the emergence scale.",
+  "_magnifier_clips_note": "TRIAL BRANCH: the anya-* set. One Faviid corallite shot three ways in the SAME framing, so a crossfade transforms the polyp in place instead of cutting between three different corals. 'fluorescent-favia-loop' is the source name of the fluorescent clip — it is green GFP glow, not a transparency; it feeds the fluorescent slot on look, not on filename. The *-microscale.mp4 set from development is still beside these: swap the three names back to A/B them in the Editor. Landscape 16:9, unlike the portrait set — see docs/FOOTAGE_TRIAL.md before judging the takeover crop or the emergence scale.",
   "magnifier_clips": {
     "alive": "anya-healthy.mp4",
     "fluorescent": "anya-fluorescent.mp4",

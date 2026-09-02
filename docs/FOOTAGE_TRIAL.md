@@ -31,7 +31,7 @@ in the **same framing**:
 | source | slot |
 |---|---|
 | `healthy-favia-loop.mp4` | `alive` |
-| `transparent-favia-loop.mp4` | `fluorescent` |
+| `fluorescent-favia-loop.mp4` | `fluorescent` |
 | `bleached-favia-loop.mov` | `dead` |
 
 **The `transparent` filename is a trap.** That clip is vivid green GFP glow — it
